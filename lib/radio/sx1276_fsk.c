@@ -24,7 +24,7 @@ fsk_settings_t fsk_settings =
         100000,    // RxBw
         150000,    // RxBwAfc
         false,     // CrcOn
-        false,      // AfcOn
+        false,     // AfcOn
         255        // PayloadLength (set payload size to the maximum for variable mode, else set the exact payload length)
 };
 
