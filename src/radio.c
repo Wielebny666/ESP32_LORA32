@@ -1,0 +1,59 @@
+#include <stdio.h>
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
+#include "esp_log.h"
+
+#include "radio.h"
+#include "sx1276.h"
+#include "sx1276_fsk_misc.h"
+
+static const char *TAG = "radio";
+
+radio_driver_t radio_driver;
+
+radio_driver_t *radio_driver_init(void)
+{
+    radio_driver.init = sx1276_init;
+    radio_driver.reset = sx1276_reset;
+    radio_driver.set_tx_packet = sx1276_set_tx_packet;
+    radio_driver.process = sx1276_process;
+    return &radio_driver;
+}
+
+static uint8_t test[] = {0xF5, 0x5F, 0xFF, 0x00, 0xFF, 0xAA, 0x55, 0x01, 0xFE, 0x55, 0xF5, 0x5F, 0xFF, 0x00, 0xFF, 0xAA, 0x55, 0x01, 0xFE, 0x55};
+
+void task_radio(void *pvParameters)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    radio_driver_t *radio;
+
+    radio = radio_driver_init();
+    radio->init();
+
+    ESP_LOGD(TAG, "Freq %d", sx1276_fsk_get_rf_frequency());
+    ESP_LOGD(TAG, "Bitrate %d", sx1276_fsk_get_bitrate());
+    ESP_LOGD(TAG, "Fdev %d", sx1276_fsk_get_fdev());
+
+    radio->set_tx_packet(test, 20);
+
+    while (1)
+    {
+        switch (radio->process())
+        {
+        case RF_TX_DONE:
+            ESP_LOGD(TAG, "RF_TX_DONE");
+            radio->set_tx_packet(test, 20);
+            break;
+        // case RF_RX_TIMEOUT:
+        //     radio->set_tx_packet(Buffer, BufferSize);
+        //     break;
+        default:
+            break;
+        }
+        //vTaskDelay(1 / portTICK_PERIOD_MS); //wait for 500 ms
+    }
+    vTaskDelete(NULL);
+}
