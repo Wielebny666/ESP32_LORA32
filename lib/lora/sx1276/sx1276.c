@@ -18,7 +18,6 @@ Maintainer: Miguel Luis, Gregory Cristian and Wael Guibene
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_log.h"
 
 #include "../include/board.h"
 #include "radio.h"

@@ -1,7 +1,7 @@
 #include "esp_log.h"
 
-#include "board.h"
 #include "hardware.h"
+#include "board.h"
 
 static const char *TAG = "board";
 
