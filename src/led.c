@@ -44,7 +44,6 @@ void task_led(void *pvParameter)
 
     while (1)
     {
-
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

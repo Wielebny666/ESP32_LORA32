@@ -62,9 +62,9 @@ void app_main()
 
     display_queue = xQueueCreate(5, sizeof(display_t));
 
-    xTaskCreate(task_display, "SSD1306", (4096), (void *)display_queue, 10, NULL);
+    xTaskCreate(task_display, "SSD1306", (2048), (void *)display_queue, 10, NULL);
     xTaskCreate(task_led, "LED", (2048), NULL, 10, NULL);
-    xTaskCreate(task_radio, "SX1276", (4096), NULL, 10, NULL);
+    xTaskCreate(task_radio, "SX1276", (8192), NULL, 10, NULL);
     //xTaskCreate(rmt_tx_task, "rmt_tx_task", 4096, NULL, 10, NULL);
 
     while (1)

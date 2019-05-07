@@ -7,4 +7,12 @@
 
 #include "esp_err.h"
 
+#include "radio.h"
+#include "sx1276/sx1276.h"
+#include "sx1276-board.h"
+
+#define USE_MODEM_LORA (1)
+
+void SpiInit();
+
 #endif

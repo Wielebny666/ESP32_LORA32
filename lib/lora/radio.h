@@ -316,4 +316,6 @@ struct Radio_s
  */
 extern const struct Radio_s Radio;
 
+void task_radio(void *pvParameter);
+
 #endif // __RADIO_H__

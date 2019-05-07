@@ -15,10 +15,17 @@ Maintainer: Miguel Luis, Gregory Cristian and Wael Guibene
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+
 #include "../include/board.h"
 #include "radio.h"
 #include "sx1276.h"
 #include "../include/sx1276-board.h"
+
+static const char *TAG = "sx1276";
 
 /*
  * Local types definition
@@ -125,7 +132,7 @@ void SX1276OnDio5Irq(void);
 /*!
  * \brief Tx & Rx timeout timer callback
  */
-void SX1276OnTimeoutIrq(void);
+void SX1276OnTimeoutIrq(void *pvParameter);
 
 /*
  * Private global constants
@@ -194,7 +201,7 @@ static uint8_t RxTxBuffer[RX_BUFFER_SIZE];
 /*!
  * Radio hardware and global parameters
  */
-SX1276_t SX1276;
+extern SX1276_t SX1276;
 
 /*!
  * Hardware DIO IRQ callback initialization
@@ -216,14 +223,16 @@ timer_event_t RxTimeoutSyncWord;
 
 void SX1276Init(RadioEvents_t *events)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     uint8_t i;
 
     RadioEvents = events;
 
     // Initialize driver timeout timers
-    TimerInit(&TxTimeoutTimer, TIMER_GROUP_0, TIMER_0, SX1276OnTimeoutIrq);
-    TimerInit(&RxTimeoutTimer, TIMER_GROUP_0, TIMER_1, SX1276OnTimeoutIrq);
-    TimerInit(&RxTimeoutSyncWord, TIMER_GROUP_1, TIMER_0, SX1276OnTimeoutIrq);
+    //TimerInit(&TxTimeoutTimer, TIMER_GROUP_0, TIMER_0, SX1276OnTimeoutIrq);
+    //TimerInit(&RxTimeoutTimer, TIMER_GROUP_0, TIMER_1, SX1276OnTimeoutIrq);
+    //TimerInit(&RxTimeoutSyncWord, TIMER_GROUP_1, TIMER_0, SX1276OnTimeoutIrq);
 
     SX1276Reset();
 
@@ -251,6 +260,8 @@ RadioState_t SX1276GetStatus(void)
 
 void SX1276SetChannel(uint32_t freq)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     SX1276.Settings.Channel = freq;
     freq = (uint32_t)((double)freq / (double)FREQ_STEP);
     SX1276Write(REG_FRFMSB, (uint8_t)((freq >> 16) & 0xFF));
@@ -268,7 +279,7 @@ bool SX1276IsChannelFree(RadioModems_t modem, uint32_t freq, int16_t rssiThresh)
 
     SX1276SetOpMode(RF_OPMODE_RECEIVER);
 
-    DelayMs(1);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
 
     rssi = SX1276ReadRssi(modem);
 
@@ -307,7 +318,7 @@ uint32_t SX1276Random(void)
 
     for (i = 0; i < 32; i++)
     {
-        DelayMs(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
         // Unfiltered RSSI value reading. Only takes the LSB value
         rnd |= ((uint32_t)SX1276Read(REG_LR_RSSIWIDEBAND) & 0x01) << i;
     }
@@ -387,6 +398,8 @@ void SX1276SetRxConfig(RadioModems_t modem, uint32_t bandwidth,
                        bool crcOn, bool freqHopOn, uint8_t hopPeriod,
                        bool iqInverted, bool rxContinuous)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     SX1276SetModem(modem);
 
     switch (modem)
@@ -554,6 +567,8 @@ void SX1276SetTxConfig(RadioModems_t modem, int8_t power, uint32_t fdev,
                        bool fixLen, bool crcOn, bool freqHopOn,
                        uint8_t hopPeriod, bool iqInverted, uint32_t timeout)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     uint8_t paConfig = 0;
     uint8_t paDac = 0;
 
@@ -839,7 +854,7 @@ void SX1276Send(uint8_t *buffer, uint8_t size)
         }
         else
         {
-            memcpy1(RxTxBuffer, buffer, size);
+            memcpy(RxTxBuffer, buffer, size);
             SX1276.Settings.FskPacketHandler.ChunkSize = 32;
         }
 
@@ -875,7 +890,7 @@ void SX1276Send(uint8_t *buffer, uint8_t size)
         if ((SX1276Read(REG_OPMODE) & ~RF_OPMODE_MASK) == RF_OPMODE_SLEEP)
         {
             SX1276SetStby();
-            DelayMs(1);
+            vTaskDelay(1 / portTICK_PERIOD_MS);
         }
         // Write payload buffer
         SX1276WriteFifo(buffer, size);
@@ -907,6 +922,8 @@ void SX1276SetStby(void)
 
 void SX1276SetRx(uint32_t timeout)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     bool rxContinuous = false;
 
     switch (SX1276.Settings.Modem)
@@ -1076,6 +1093,8 @@ void SX1276SetRx(uint32_t timeout)
 
 void SX1276SetTx(uint32_t timeout)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     TimerSetValue(&TxTimeoutTimer, timeout);
 
     switch (SX1276.Settings.Modem)
@@ -1199,39 +1218,27 @@ void SX1276Reset(void)
     ESP_ERROR_CHECK(gpio_set_level(SX1276.Reset, 0));
 
     // Wait 1 ms
-    DelayMs(1);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+    ;
 
     // Configure RESET as input
     ESP_ERROR_CHECK(gpio_set_level(SX1276.Reset, 1));
 
     // Wait 6 ms
-    DelayMs(6);
+    vTaskDelay(6 / portTICK_PERIOD_MS);
+    ;
 }
 
 void SX1276SetOpMode(uint8_t opMode)
 {
-    if (opMode == RF_OPMODE_SLEEP)
-    {
-        SX1276SetAntSwLowPower(true);
-    }
-    else
-    {
-        SX1276SetAntSwLowPower(false);
-        if (opMode == RF_OPMODE_TRANSMITTER)
-        {
-            SX1276SetAntSw(1);
-        }
-        else
-        {
-            SX1276SetAntSw(0);
-        }
-    }
     SX1276Write(REG_OPMODE, (SX1276Read(REG_OPMODE) & RF_OPMODE_MASK) | opMode);
 }
 
 void SX1276SetModem(RadioModems_t modem)
 {
-    assert_param(SX1276.Spi != NULL);
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    assert(SX1276.Spi != NULL);
 
     if (SX1276.Settings.Modem == modem)
     {
@@ -1333,7 +1340,7 @@ void SX1276SetMaxPayloadLength(RadioModems_t modem, uint8_t max)
     }
 }
 
-void SX1276OnTimeoutIrq(void)
+IRAM_ATTR void SX1276OnTimeoutIrq(void *pvParameter)
 {
     switch (SX1276.Settings.State)
     {
@@ -1382,6 +1389,8 @@ void SX1276OnTimeoutIrq(void)
 
 void SX1276OnDio0Irq(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     volatile uint8_t irqFlags = 0;
 
     switch (SX1276.Settings.State)
@@ -1580,6 +1589,8 @@ void SX1276OnDio0Irq(void)
 
 void SX1276OnDio1Irq(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     switch (SX1276.Settings.State)
     {
     case RF_RX_RUNNING:
@@ -1657,6 +1668,8 @@ void SX1276OnDio1Irq(void)
 
 void SX1276OnDio2Irq(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     switch (SX1276.Settings.State)
     {
     case RF_RX_RUNNING:
