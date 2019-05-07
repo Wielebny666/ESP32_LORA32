@@ -148,7 +148,7 @@ void task_radio(void *pvParameter)
         switch (State)
         {
         case RX:
-            ESP_LOGD(TAG, "RX");
+            ESP_LOGD(TAG, "State RX");
             if (isMaster == true)
             {
                 if (BufferSize > 0)
@@ -209,14 +209,14 @@ void task_radio(void *pvParameter)
             State = LOWPOWER;
             break;
         case TX:
-            ESP_LOGD(TAG, "TX");
+            ESP_LOGD(TAG, "State TX");
 
             Radio.Rx(RX_TIMEOUT_VALUE);
             State = LOWPOWER;
             break;
         case RX_TIMEOUT:
         case RX_ERROR:
-            ESP_LOGD(TAG, "ERROR/TIOMOUT");
+            ESP_LOGD(TAG, "State ERROR/TIOMOUT");
 
             if (isMaster == true)
             {
@@ -239,14 +239,14 @@ void task_radio(void *pvParameter)
             State = LOWPOWER;
             break;
         case TX_TIMEOUT:
-            ESP_LOGD(TAG, "TX_TIMEOUT");
+            ESP_LOGD(TAG, "State TX_TIMEOUT");
 
             Radio.Rx(RX_TIMEOUT_VALUE);
             State = LOWPOWER;
             break;
         case LOWPOWER:
         default:
-            ESP_LOGD(TAG, "LOWPOWER");
+            ESP_LOGD(TAG, "State LOWPOWER/DEFAULT");
 
             // Set low power
             break;
