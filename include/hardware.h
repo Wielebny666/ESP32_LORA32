@@ -33,4 +33,13 @@
 //#define RMT_RX_GPIO_NUM GPIO_NUM_16 //cc1101 Tx
 #define RMT_RX_GPIO_NUM GPIO_NUM_15 //sx1276 Tx
 //#define RMT_RX_GPIO_NUM GPIO_NUM_12
+
+#define ESP_INTR_FLAG_DEFAULT 0
+#define GPIO_INPUT_PIN_SEL (1ULL << RADIO_DIO_0) | (1ULL << RADIO_DIO_1) | (1ULL << RADIO_DIO_2)
+
+/*!
+ * Defines the time required for the TCXO to wakeup [ms].
+ */
+#define BOARD_TCXO_WAKEUP_TIME                      0
+
 #endif

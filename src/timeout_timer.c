@@ -6,6 +6,15 @@
 
 static const char *TAG = "timeout_timer";
 
+void Init (TimerHandle_t  *timer, const char* timer_name,  void (*fn)(void *){
+            xTimers[ x ] = xTimerCreate(    "Timer",       // Just a text name, not used by the kernel.
+                                        ( 100 * x ),   // The timer period in ticks.
+                                        pdTRUE,        // The timers will auto-reload themselves when they expire.
+                                        ( void * ) x,  // Assign each timer a unique id equal to its array index.
+                                        vTimerCallback // Each timer calls the same callback when it expires.
+                                    );
+}
+
 void TimerInit(timer_event_t *timer, timer_group_t timer_group, timer_idx_t timer_idx, void (*fn)(void *))
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);

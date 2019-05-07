@@ -1,24 +1,44 @@
-/*
- / _____)             _              | |
-( (____  _____ ____ _| |_ _____  ____| |__
- \____ \| ___ |    (_   _) ___ |/ ___)  _ \
- _____) ) ____| | | || |_| ____( (___| | | |
-(______/|_____)_|_|_| \__)_____)\____)_| |_|
-    (C)2013 Semtech
+/*!
+ * \file      sx1276-board.c
+ *
+ * \brief     Target board SX1276 driver implementation
+ *
+ * \copyright Revised BSD License, see section \ref LICENSE.
+ *
+ * \code
+ *                ______                              _
+ *               / _____)             _              | |
+ *              ( (____  _____ ____ _| |_ _____  ____| |__
+ *               \____ \| ___ |    (_   _) ___ |/ ___)  _ \
+ *               _____) ) ____| | | || |_| ____( (___| | | |
+ *              (______/|_____)_|_|_| \__)_____)\____)_| |_|
+ *              (C)2013-2017 Semtech
+ *
+ * \endcode
+ *
+ * \author    Miguel Luis ( Semtech )
+ *
+ * \author    Gregory Cristian ( Semtech )
+ */
+#include <stdlib.h>
 
-Description: SX1276 driver specific target board functions implementation
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
 
-License: Revised BSD License, see LICENSE.TXT file include in the project
-
-Maintainer: Miguel Luis and Gregory Cristian
-*/
 #include "hardware.h"
-#include "board.h"
 #include "radio.h"
-#include "sx1276/sx1276.h"
 #include "sx1276-board.h"
 
 static const char *TAG = "sx1276-board";
+
+/*!
+ * \brief Gets the board PA selection configuration
+ *
+ * \param [IN] power Selects the right PA according to the wanted power.
+ * \retval PaSelect RegPaConfig PaSelect value
+ */
+static uint8_t SX1276GetPaSelect(int8_t power);
 
 /*!
  * Radio driver structure initialization
@@ -40,12 +60,19 @@ const struct Radio_s Radio =
         SX1276SetStby,
         SX1276SetRx,
         SX1276StartCad,
+        SX1276SetTxContinuousWave,
         SX1276ReadRssi,
         SX1276Write,
         SX1276Read,
         SX1276WriteBuffer,
         SX1276ReadBuffer,
-        SX1276SetMaxPayloadLength};
+        SX1276SetMaxPayloadLength,
+        SX1276SetPublicNetwork,
+        SX1276GetWakeupTime,
+        NULL, // void ( *IrqProcess )( void )
+        NULL, // void ( *RxBoosted )( uint32_t timeout ) - SX126x Only
+        NULL, // void ( *SetRxDutyCycle )( uint32_t rxTime, uint32_t sleepTime ) - SX126x Only
+};
 
 void SX1276IoInit(void)
 {
@@ -94,9 +121,98 @@ void SX1276IoDeInit(void)
 {
 }
 
-uint8_t SX1276GetPaSelect(uint32_t channel)
+uint32_t SX1276GetBoardTcxoWakeupTime( void )
 {
-    if (channel < RF_MID_BAND_THRESH)
+    return BOARD_TCXO_WAKEUP_TIME;
+}
+
+
+void SX1276Reset(void)
+{
+    // Set RESET pin to 0
+    ESP_ERROR_CHECK(gpio_set_level(SX1276.Reset, 0));
+
+    // Wait 1 ms
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+
+    // Configure RESET as input
+    ESP_ERROR_CHECK(gpio_set_level(SX1276.Reset, 1));
+
+    // Wait 6 ms
+    vTaskDelay(6 / portTICK_PERIOD_MS);
+}
+
+void SX1276SetRfTxPower(int8_t power)
+{
+    uint8_t paConfig = 0;
+    uint8_t paDac = 0;
+
+    paConfig = SX1276Read(REG_PACONFIG);
+    paDac = SX1276Read(REG_PADAC);
+
+    paConfig = (paConfig & RF_PACONFIG_PASELECT_MASK) | SX1276GetPaSelect(power);
+
+    if ((paConfig & RF_PACONFIG_PASELECT_PABOOST) == RF_PACONFIG_PASELECT_PABOOST)
+    {
+        if (power > 17)
+        {
+            paDac = (paDac & RF_PADAC_20DBM_MASK) | RF_PADAC_20DBM_ON;
+        }
+        else
+        {
+            paDac = (paDac & RF_PADAC_20DBM_MASK) | RF_PADAC_20DBM_OFF;
+        }
+        if ((paDac & RF_PADAC_20DBM_ON) == RF_PADAC_20DBM_ON)
+        {
+            if (power < 5)
+            {
+                power = 5;
+            }
+            if (power > 20)
+            {
+                power = 20;
+            }
+            paConfig = (paConfig & RF_PACONFIG_OUTPUTPOWER_MASK) | (uint8_t)((uint16_t)(power - 5) & 0x0F);
+        }
+        else
+        {
+            if (power < 2)
+            {
+                power = 2;
+            }
+            if (power > 17)
+            {
+                power = 17;
+            }
+            paConfig = (paConfig & RF_PACONFIG_OUTPUTPOWER_MASK) | (uint8_t)((uint16_t)(power - 2) & 0x0F);
+        }
+    }
+    else
+    {
+        if (power > 0)
+        {
+            if (power > 15)
+            {
+                power = 15;
+            }
+            paConfig = (paConfig & RF_PACONFIG_MAX_POWER_MASK & RF_PACONFIG_OUTPUTPOWER_MASK) | (7 << 4) | (power);
+        }
+        else
+        {
+            if (power < -4)
+            {
+                power = -4;
+            }
+            paConfig = (paConfig & RF_PACONFIG_MAX_POWER_MASK & RF_PACONFIG_OUTPUTPOWER_MASK) | (0 << 4) | (power + 4);
+        }
+    }
+    SX1276Write(REG_PACONFIG, paConfig);
+    SX1276Write(REG_PADAC, paDac);
+}
+
+static uint8_t SX1276GetPaSelect(int8_t power)
+{
+    if (power > 14)
     {
         return RF_PACONFIG_PASELECT_PABOOST;
     }

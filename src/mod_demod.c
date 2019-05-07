@@ -21,22 +21,22 @@ static const char *RMT_RX = "RMT Rx";
 #define RMT_BIT_DURATION (RMT_BIT_US / 10 * RMT_TICK_10_US)
 
 #define GPIO_OUTPUT_IO_0 (RMT_TX_GPIO_NUM)
-#define GPIO_OUTPUT_PIN_SEL (1ULL << GPIO_OUTPUT_IO_0)
+#define GPIO_OUTPUT_PIN_GROUP (1ULL << GPIO_OUTPUT_IO_0)
 #define GPIO_INPUT_IO_0 (RMT_RX_GPIO_NUM)
-#define GPIO_INPUT_PIN_SEL (1ULL << GPIO_INPUT_IO_0)
+#define GPIO_INPUT_PIN_GROUP (1ULL << GPIO_INPUT_IO_0)
 
 //Convert uint8_t type of data to rmt format data.
 static void IRAM_ATTR u8_to_rmt(const void *src, rmt_item32_t *dest, size_t src_size,
                                 size_t wanted_num, size_t *translated_size, size_t *item_num);
 static void rmt_tx_int()
 {
-    // gpio_config_t tx_out = {
-    //     .mode = GPIO_MODE_OUTPUT,
-    //     .intr_type = GPIO_PIN_INTR_DISABLE,
-    //     .pull_up_en = GPIO_PULLUP_DISABLE,
-    //     .pull_down_en = GPIO_PULLDOWN_ENABLE,
-    //     .pin_bit_mask = GPIO_OUTPUT_PIN_SEL};
-    // ESP_ERROR_CHECK(gpio_config(&tx_out));
+    gpio_config_t tx_out = {
+        .mode = GPIO_MODE_OUTPUT,
+        .intr_type = GPIO_PIN_INTR_DISABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+        .pin_bit_mask = GPIO_OUTPUT_PIN_GROUP};
+    ESP_ERROR_CHECK(gpio_config(&tx_out));
 
     rmt_config_t rmt_tx = {
         .rmt_mode = RMT_MODE_TX,
@@ -64,7 +64,7 @@ static void rmt_rx_init()
         .intr_type = GPIO_PIN_INTR_DISABLE,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_ENABLE,
-        .pin_bit_mask = GPIO_INPUT_PIN_SEL};
+        .pin_bit_mask = GPIO_INPUT_PIN_GROUP};
     ESP_ERROR_CHECK(gpio_config(&rx_in));
 
     rmt_config_t rmt_rx = {
