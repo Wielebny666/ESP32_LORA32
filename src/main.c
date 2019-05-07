@@ -10,6 +10,8 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+// #include "freertos/timers.h"
+// #include "timeout_timer.h"
 
 #include "esp_log.h"
 #include "esp_err.h"
@@ -41,6 +43,63 @@ display_t send_message;
 
 void uart_init();
 
+// static void SX1276OnTimeoutIrq(TimerHandle_t timer)
+// {
+//     ESP_LOGD(TAG, "%s", __FUNCTION__);
+// }
+
+// TimerHandle_t TxTimeoutTimerr = NULL;
+
+// void task_timer(void *pvParameter){
+
+//     TimerInit(&TxTimeoutTimerr, 0, "TxTimeoutTimer", SX1276OnTimeoutIrq);
+//     TimerSetValue(&TxTimeoutTimerr, 1000);
+
+//     TimerStart(&TxTimeoutTimerr);
+
+//     while(1){
+
+//     }
+// }
+
+// void app_main()
+// {
+//     xTaskCreate(task_timer, "test", (2048), NULL, 10, NULL);
+
+
+//     while (1)
+//     {
+//     }
+// }
+// static void timer_callback(TimerHandle_t timer)
+// {
+//     volatile int *count;
+//     count = (volatile int *)pvTimerGetTimerID(timer);
+//     (*count)++;
+//     printf("Callback timer %p count %p = %d\n", timer, count, *count);
+// }
+
+// void app_main()
+// {
+//     volatile int count = 0;
+//     TimerHandle_t oneshot = xTimerCreate("oneshot", 100 / portTICK_PERIOD_MS, pdFALSE,
+//                                          (void *)&count, timer_callback);
+//     assert(oneshot);
+//     xTimerIsTimerActive(oneshot);
+
+//     xTimerStart(oneshot, 1);
+//     vTaskDelay(2); /* give the timer task a chance to process the message */
+
+//     xTimerIsTimerActive(oneshot);
+
+//     vTaskDelay(250 / portTICK_PERIOD_MS); // 2.5 timer periods
+
+//     xTimerIsTimerActive(oneshot);
+//     while (1)
+//     {
+//     }
+// }
+
 void app_main()
 {
     printf("Hello world!\n");
@@ -62,9 +121,9 @@ void app_main()
 
     display_queue = xQueueCreate(5, sizeof(display_t));
 
+    xTaskCreate(task_radio, "SX1276", (4096), NULL, 10, NULL);
     xTaskCreate(task_display, "SSD1306", (2048), (void *)display_queue, 10, NULL);
     xTaskCreate(task_led, "LED", (2048), NULL, 10, NULL);
-    xTaskCreate(task_radio, "SX1276", (8192), NULL, 10, NULL);
     //xTaskCreate(rmt_tx_task, "rmt_tx_task", 4096, NULL, 10, NULL);
 
     while (1)

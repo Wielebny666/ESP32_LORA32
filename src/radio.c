@@ -247,10 +247,10 @@ void task_radio(void *pvParameter)
         case LOWPOWER:
         default:
             ESP_LOGD(TAG, "State LOWPOWER/DEFAULT");
-
             // Set low power
             break;
         }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
 
         //TimerLowPowerHandler();
     }
@@ -259,12 +259,16 @@ void task_radio(void *pvParameter)
 
 void OnTxDone(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     Radio.Sleep();
     State = TX;
 }
 
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     Radio.Sleep();
     BufferSize = size;
     memcpy(Buffer, payload, BufferSize);
@@ -275,18 +279,24 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 
 void OnTxTimeout(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     Radio.Sleep();
     State = TX_TIMEOUT;
 }
 
 void OnRxTimeout(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     Radio.Sleep();
     State = RX_TIMEOUT;
 }
 
 void OnRxError(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     Radio.Sleep();
     State = RX_ERROR;
 }

@@ -27,6 +27,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 
 #include "../include/board.h"
 #include "radio.h"
@@ -135,7 +136,7 @@ IRAM_ATTR void SX1276OnDio5Irq(void *context);
 /*!
  * \brief Tx & Rx timeout timer callback
  */
-IRAM_ATTR void SX1276OnTimeoutIrq(void *context);
+static void SX1276OnTimeoutIrq(TimerHandle_t timer);
 
 /*
  * Private global constants
@@ -220,9 +221,9 @@ DioIrqHandler *DioIrq[] = {
 /*!
  * Tx and Rx timers
  */
-TimerHandle_t  TxTimeoutTimer;
-TimerHandle_t  RxTimeoutTimer;
-TimerHandle_t  RxTimeoutSyncWord;
+TimerHandle_t TxTimeoutTimer = NULL;
+TimerHandle_t RxTimeoutTimer = NULL;
+TimerHandle_t RxTimeoutSyncWord = NULL;
 
 /*
  * Radio driver functions implementation
@@ -237,9 +238,9 @@ void SX1276Init(RadioEvents_t *events)
     RadioEvents = events;
 
     // Initialize driver timeout timers
-    // TimerInit(&TxTimeoutTimer, TIMER_GROUP_0, TIMER_0, SX1276OnTimeoutIrq);
-    // TimerInit(&RxTimeoutTimer, TIMER_GROUP_0, TIMER_1, SX1276OnTimeoutIrq);
-    // TimerInit(&RxTimeoutSyncWord, TIMER_GROUP_1, TIMER_0, SX1276OnTimeoutIrq);
+    TimerInit(&TxTimeoutTimer, 0, "TxTimeoutTimer", SX1276OnTimeoutIrq);
+    TimerInit(&RxTimeoutTimer, 1, "RxTimeoutTimer", SX1276OnTimeoutIrq);
+    TimerInit(&RxTimeoutSyncWord, 2, "RxTimeoutSyncWord", SX1276OnTimeoutIrq);
 
     SX1276Reset();
 
@@ -414,6 +415,7 @@ void SX1276SetRxConfig(RadioModems_t modem, uint32_t bandwidth,
                        bool iqInverted, bool rxContinuous)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
+    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
 
     SX1276SetModem(modem);
 
@@ -585,6 +587,7 @@ void SX1276SetTxConfig(RadioModems_t modem, int8_t power, uint32_t fdev,
                        uint8_t hopPeriod, bool iqInverted, uint32_t timeout)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
+    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
 
     SX1276SetModem(modem);
 
@@ -791,6 +794,9 @@ uint32_t SX1276GetTimeOnAir(RadioModems_t modem, uint8_t pktLen)
 
 void SX1276Send(uint8_t *buffer, uint8_t size)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
+
     uint32_t txTimeout = 0;
 
     switch (SX1276.Settings.Modem)
@@ -865,6 +871,8 @@ void SX1276Send(uint8_t *buffer, uint8_t size)
 
 void SX1276SetSleep(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     TimerStop(&RxTimeoutTimer);
     TimerStop(&TxTimeoutTimer);
 
@@ -874,6 +882,8 @@ void SX1276SetSleep(void)
 
 void SX1276SetStby(void)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     TimerStop(&RxTimeoutTimer);
     TimerStop(&TxTimeoutTimer);
 
@@ -884,8 +894,10 @@ void SX1276SetStby(void)
 void SX1276SetRx(uint32_t timeout)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
+    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
 
     bool rxContinuous = false;
+    TimerStop(&TxTimeoutTimer);
 
     switch (SX1276.Settings.Modem)
     {
@@ -1030,11 +1042,8 @@ void SX1276SetRx(uint32_t timeout)
     {
         SX1276SetOpMode(RF_OPMODE_RECEIVER);
 
-        if (rxContinuous == false)
-        {
-            TimerSetValue(&RxTimeoutSyncWord, SX1276.Settings.Fsk.RxSingleTimeout);
-            TimerStart(&RxTimeoutSyncWord);
-        }
+        TimerSetValue(&RxTimeoutSyncWord, SX1276.Settings.Fsk.RxSingleTimeout);
+        TimerStart(&RxTimeoutSyncWord);
     }
     else
     {
@@ -1052,6 +1061,7 @@ void SX1276SetRx(uint32_t timeout)
 void SX1276SetTx(uint32_t timeout)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
+    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
 
     TimerSetValue(&TxTimeoutTimer, timeout);
 
@@ -1202,6 +1212,7 @@ void SX1276SetOpMode(uint8_t opMode)
 void SX1276SetModem(RadioModems_t modem)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
+    ESP_LOGD(TAG, "Set Modem type %s", (modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
 
     if ((SX1276Read(REG_OPMODE) & RFLR_OPMODE_LONGRANGEMODE_ON) != 0)
     {
@@ -1218,6 +1229,7 @@ void SX1276SetModem(RadioModems_t modem)
     }
 
     SX1276.Settings.Modem = modem;
+    ESP_LOGD(TAG, "Set Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
     switch (SX1276.Settings.Modem)
     {
     default:
@@ -1322,6 +1334,8 @@ void SX1276SetMaxPayloadLength(RadioModems_t modem, uint8_t max)
 
 void SX1276SetPublicNetwork(bool enable)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     SX1276SetModem(MODEM_LORA);
     SX1276.Settings.LoRa.PublicNetwork = enable;
     if (enable == true)
@@ -1341,13 +1355,14 @@ uint32_t SX1276GetWakeupTime(void)
     return SX1276GetBoardTcxoWakeupTime() + RADIO_WAKEUP_TIME;
 }
 
-IRAM_ATTR void SX1276OnTimeoutIrq(void *context)
+static void SX1276OnTimeoutIrq(TimerHandle_t timer)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
     switch (SX1276.Settings.State)
     {
     case RF_RX_RUNNING:
+        ESP_LOGD(TAG, "RF_RX_RUNNING");
         if (SX1276.Settings.Modem == MODEM_FSK)
         {
             SX1276.Settings.FskPacketHandler.PreambleDetected = false;
@@ -1379,6 +1394,8 @@ IRAM_ATTR void SX1276OnTimeoutIrq(void *context)
         }
         break;
     case RF_TX_RUNNING:
+        ESP_LOGD(TAG, "RF_TX_RUNNING");
+
         // Tx timeout shouldn't happen.
         // But it has been observed that when it happens it is a result of a corrupted SPI transfer
         // it depends on the platform design.
@@ -1619,6 +1636,8 @@ IRAM_ATTR void SX1276OnDio1Irq(void *context)
         switch (SX1276.Settings.Modem)
         {
         case MODEM_FSK:
+            TimerStop(&RxTimeoutSyncWord);
+
             // FifoLevel interrupt
             // Read received packet size
             if ((SX1276.Settings.FskPacketHandler.Size == 0) && (SX1276.Settings.FskPacketHandler.NbBytes == 0))
@@ -1821,7 +1840,7 @@ IRAM_ATTR void SX1276OnDio4Irq(void *context)
     }
 }
 
-void SX1276OnDio5Irq(void *context)
+IRAM_ATTR void SX1276OnDio5Irq(void *context)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
