@@ -101,32 +101,32 @@ void SX1276SetOpMode(uint8_t opMode);
 /*!
  * \brief DIO 0 IRQ callback
  */
-void SX1276OnDio0Irq(void);
+IRAM_ATTR void SX1276OnDio0Irq(void);
 
 /*!
  * \brief DIO 1 IRQ callback
  */
-void SX1276OnDio1Irq(void);
+IRAM_ATTR void SX1276OnDio1Irq(void);
 
 /*!
  * \brief DIO 2 IRQ callback
  */
-void SX1276OnDio2Irq(void);
+IRAM_ATTR void SX1276OnDio2Irq(void);
 
 /*!
  * \brief DIO 3 IRQ callback
  */
-void SX1276OnDio3Irq(void);
+IRAM_ATTR void SX1276OnDio3Irq(void);
 
 /*!
  * \brief DIO 4 IRQ callback
  */
-void SX1276OnDio4Irq(void);
+IRAM_ATTR void SX1276OnDio4Irq(void);
 
 /*!
  * \brief DIO 5 IRQ callback
  */
-void SX1276OnDio5Irq(void);
+IRAM_ATTR void SX1276OnDio5Irq(void);
 
 /*!
  * \brief Tx & Rx timeout timer callback
@@ -205,9 +205,13 @@ extern SX1276_t SX1276;
 /*!
  * Hardware DIO IRQ callback initialization
  */
-DioIrqHandler *DioIrq[] = {SX1276OnDio0Irq, SX1276OnDio1Irq,
-                           SX1276OnDio2Irq, SX1276OnDio3Irq,
-                           SX1276OnDio4Irq, NULL};
+DioIrqHandler *DioIrq[] = {
+    SX1276OnDio0Irq,
+    SX1276OnDio1Irq,
+    SX1276OnDio2Irq,
+    SX1276OnDio3Irq,
+    SX1276OnDio4Irq,
+    NULL};
 
 /*!
  * Tx and Rx timers
@@ -1237,7 +1241,9 @@ void SX1276SetModem(RadioModems_t modem)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
-    assert(SX1276.Spi != NULL);
+    assert(SX1276.Spi);
+
+    ESP_LOGD(TAG, "Jest %s ustawiamy %s", SX1276.Settings.Modem ? "LORA" : "FSK", modem ? "LORA" : "FSK");
 
     if (SX1276.Settings.Modem == modem)
     {
@@ -1267,6 +1273,8 @@ void SX1276SetModem(RadioModems_t modem)
 
 void SX1276Write(uint8_t addr, uint8_t data)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 8;
@@ -1279,6 +1287,8 @@ void SX1276Write(uint8_t addr, uint8_t data)
 
 uint8_t SX1276Read(uint8_t addr)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 8;
@@ -1291,6 +1301,8 @@ uint8_t SX1276Read(uint8_t addr)
 
 void SX1276WriteBuffer(uint8_t addr, uint8_t *buffer, uint8_t size)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = size * 8;
@@ -1302,6 +1314,8 @@ void SX1276WriteBuffer(uint8_t addr, uint8_t *buffer, uint8_t size)
 
 void SX1276ReadBuffer(uint8_t addr, uint8_t *buffer, uint8_t size)
 {
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = size * 8;
@@ -1386,7 +1400,7 @@ IRAM_ATTR void SX1276OnTimeoutIrq(void *pvParameter)
     }
 }
 
-void SX1276OnDio0Irq(void)
+IRAM_ATTR void SX1276OnDio0Irq(void)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
@@ -1586,7 +1600,7 @@ void SX1276OnDio0Irq(void)
     }
 }
 
-void SX1276OnDio1Irq(void)
+IRAM_ATTR void SX1276OnDio1Irq(void)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
@@ -1665,7 +1679,7 @@ void SX1276OnDio1Irq(void)
     }
 }
 
-void SX1276OnDio2Irq(void)
+IRAM_ATTR void SX1276OnDio2Irq(void)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
@@ -1731,7 +1745,7 @@ void SX1276OnDio2Irq(void)
     }
 }
 
-void SX1276OnDio3Irq(void)
+IRAM_ATTR void SX1276OnDio3Irq(void)
 {
     switch (SX1276.Settings.Modem)
     {
@@ -1762,7 +1776,7 @@ void SX1276OnDio3Irq(void)
     }
 }
 
-void SX1276OnDio4Irq(void)
+IRAM_ATTR void SX1276OnDio4Irq(void)
 {
     switch (SX1276.Settings.Modem)
     {
@@ -1781,7 +1795,7 @@ void SX1276OnDio4Irq(void)
     }
 }
 
-void SX1276OnDio5Irq(void)
+IRAM_ATTR void SX1276OnDio5Irq(void)
 {
     switch (SX1276.Settings.Modem)
     {

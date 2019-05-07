@@ -55,7 +55,7 @@ void SX1276IoInit(void)
         .mode = GPIO_MODE_INPUT,
         .intr_type = GPIO_PIN_INTR_POSEDGE,
         .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+        //.pull_down_en = GPIO_PULLDOWN_ENABLE,
         .pin_bit_mask = GPIO_INPUT_PIN_SEL};
     ESP_ERROR_CHECK(gpio_config(&sx1267_dio));
 

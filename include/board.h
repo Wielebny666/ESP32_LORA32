@@ -12,7 +12,8 @@
 #include "sx1276/sx1276.h"
 #include "sx1276-board.h"
 
-#define USE_MODEM_LORA (1)
+//#define USE_MODEM_LORA (1)
+#define USE_MODEM_FSK (1)
 
 void SpiInit();
 
