@@ -18,14 +18,7 @@ Maintainer: Miguel Luis and Gregory Cristian
 #include "sx1276/sx1276.h"
 #include "sx1276-board.h"
 
-#include "esp_log.h"
-
 static const char *TAG = "sx1276-board";
-
-/*!
- * Flag used to set the RF switch control pins in low power mode when the radio is not active.
- */
-static bool RadioIsActive = false;
 
 /*!
  * Radio driver structure initialization
