@@ -215,8 +215,7 @@ DioIrqHandler *DioIrq[] = {
     SX1276OnDio1Irq,
     SX1276OnDio2Irq,
     SX1276OnDio3Irq,
-    SX1276OnDio4Irq,
-    NULL};
+    SX1276OnDio4Irq, NULL};
 
 /*!
  * Tx and Rx timers
@@ -294,7 +293,7 @@ bool SX1276IsChannelFree(RadioModems_t modem, uint32_t freq, int16_t rssiThresh,
     carrierSenseTime = xTaskGetTickCount();
 
     // Perform carrier sense for maxCarrierSenseTime
-    while ((xTaskGetTickCount() - carrierSenseTime) < (maxCarrierSenseTime / portTICK_PERIOD_MS))
+    while ((xTaskGetTickCount() - carrierSenseTime) / portTICK_PERIOD_MS < (maxCarrierSenseTime / portTICK_PERIOD_MS))
     {
         rssi = SX1276ReadRssi(modem);
 
@@ -433,6 +432,10 @@ void SX1276SetRxConfig(RadioModems_t modem, uint32_t bandwidth,
         SX1276.Settings.Fsk.RxContinuous = rxContinuous;
         SX1276.Settings.Fsk.PreambleLen = preambleLen;
         SX1276.Settings.Fsk.RxSingleTimeout = (uint32_t)(symbTimeout * ((1.0 / (double)datarate) * 8.0) * 1000);
+
+        ESP_LOGD(TAG, "datarate %d", datarate);
+        ESP_LOGD(TAG, "symbTimeout %d", symbTimeout);
+        ESP_LOGD(TAG, "RxSingleTimeout %d", SX1276.Settings.Fsk.RxSingleTimeout);
 
         datarate = (uint16_t)((double)XTAL_FREQ / (double)datarate);
         SX1276Write(REG_BITRATEMSB, (uint8_t)(datarate >> 8));
@@ -1042,8 +1045,11 @@ void SX1276SetRx(uint32_t timeout)
     {
         SX1276SetOpMode(RF_OPMODE_RECEIVER);
 
-        TimerSetValue(&RxTimeoutSyncWord, SX1276.Settings.Fsk.RxSingleTimeout);
-        TimerStart(&RxTimeoutSyncWord);
+        if (rxContinuous == false)
+        {
+            TimerSetValue(&RxTimeoutSyncWord, SX1276.Settings.Fsk.RxSingleTimeout);
+            TimerStart(&RxTimeoutSyncWord);
+        }
     }
     else
     {
@@ -1062,6 +1068,8 @@ void SX1276SetTx(uint32_t timeout)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
     ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
+
+    TimerStop(&RxTimeoutTimer);
 
     TimerSetValue(&TxTimeoutTimer, timeout);
 
@@ -1234,14 +1242,14 @@ void SX1276SetModem(RadioModems_t modem)
     {
     default:
     case MODEM_FSK:
-        SX1276SetSleep();
+        SX1276SetOpMode(RF_OPMODE_SLEEP);
         SX1276Write(REG_OPMODE, (SX1276Read(REG_OPMODE) & RFLR_OPMODE_LONGRANGEMODE_MASK) | RFLR_OPMODE_LONGRANGEMODE_OFF);
 
         SX1276Write(REG_DIOMAPPING1, 0x00);
         SX1276Write(REG_DIOMAPPING2, 0x30); // DIO5=ModeReady
         break;
     case MODEM_LORA:
-        SX1276SetSleep();
+        SX1276SetOpMode(RF_OPMODE_SLEEP);
         SX1276Write(REG_OPMODE, (SX1276Read(REG_OPMODE) & RFLR_OPMODE_LONGRANGEMODE_MASK) | RFLR_OPMODE_LONGRANGEMODE_ON);
 
         SX1276Write(REG_DIOMAPPING1, 0x00);
@@ -1636,6 +1644,7 @@ IRAM_ATTR void SX1276OnDio1Irq(void *context)
         switch (SX1276.Settings.Modem)
         {
         case MODEM_FSK:
+            // Stop timer
             TimerStop(&RxTimeoutSyncWord);
 
             // FifoLevel interrupt

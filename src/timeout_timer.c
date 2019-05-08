@@ -17,8 +17,7 @@ void TimerInit(TimerHandle_t *timer, const uint8_t index, const char *timer_name
     ESP_LOGD(TAG, "Init Timer %p", timer);
     ESP_LOGD(TAG, "Init Timer %p", *timer);
 
-
-    *timer = xTimerCreate("Timer",                  // Just a text name, not used by the kernel.
+    *timer = xTimerCreate(timer_name,               // Just a text name, not used by the kernel.
                           100 / portTICK_PERIOD_MS, // The timer period in ticks.
                           pdFALSE,                  // The timers will auto-reload themselves when they expire.
                           (void *)&index,           // Assign each timer a unique id equal to its array index.
@@ -55,7 +54,7 @@ void TimerSetValue(TimerHandle_t *timer, uint32_t value)
     ESP_LOGD(TAG, "%s", __FUNCTION__);
     ESP_LOGD(TAG, "Set Timer %p Value %d", timer, value);
 
-    xTimerChangePeriod(*timer, value / portTICK_PERIOD_MS, 1); // /
+    xTimerChangePeriod(*timer, pdMS_TO_TICKS(value), 0); // /
     //ESP_ERROR_CHECK(timer_set_alarm_value(timer->timer_group, timer->timer_idx, value));
 }
 
@@ -64,12 +63,7 @@ void TimerStart(TimerHandle_t *timer)
     ESP_LOGD(TAG, "%s", __FUNCTION__);
     ESP_LOGD(TAG, "Start Timer %p", timer);
 
-    xTimerStart(*timer, 1);
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-
-    BaseType_t test = xTimerIsTimerActive(*timer);
-    ESP_LOGD(TAG, "Start Timer %d", test);
-    //ESP_ERROR_CHECK(timer_start(timer->timer_group, timer->timer_idx));
+    xTimerStart(*timer, 0);
 }
 
 void TimerStop(TimerHandle_t *timer)
@@ -77,6 +71,5 @@ void TimerStop(TimerHandle_t *timer)
     ESP_LOGD(TAG, "%s", __FUNCTION__);
     ESP_LOGD(TAG, "Stop Timer %p", timer);
 
-    xTimerStop(*timer, 10);
-    //ESP_ERROR_CHECK(timer_pause(timer->timer_group, timer->timer_idx));
+    xTimerStop(*timer, 0);
 }
