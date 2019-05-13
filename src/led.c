@@ -16,7 +16,7 @@ static const char *TAG = "led";
 void led_init()
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
-    
+
     ledc_timer_config_t ledc_timer = {
         .duty_resolution = LEDC_TIMER_13_BIT, // resolution of PWM duty
         .freq_hz = 10,                        // frequency of PWM signal
@@ -44,6 +44,7 @@ void task_led(void *pvParameter)
 
     while (1)
     {
+        ESP_LOGD(TAG, "Up");
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

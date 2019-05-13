@@ -106,37 +106,37 @@ void SX1276SetOpMode(uint8_t opMode);
 /*!
  * \brief DIO 0 IRQ callback
  */
-IRAM_ATTR void SX1276OnDio0Irq(void *context);
+static void IRAM_ATTR SX1276OnDio0Irq(void *context);
 
 /*!
  * \brief DIO 1 IRQ callback
  */
-IRAM_ATTR void SX1276OnDio1Irq(void *context);
+static void IRAM_ATTR SX1276OnDio1Irq(void *context);
 
 /*!
  * \brief DIO 2 IRQ callback
  */
-IRAM_ATTR void SX1276OnDio2Irq(void *context);
+static void IRAM_ATTR SX1276OnDio2Irq(void *context);
 
 /*!
  * \brief DIO 3 IRQ callback
  */
-IRAM_ATTR void SX1276OnDio3Irq(void *context);
+static void IRAM_ATTR SX1276OnDio3Irq(void *context);
 
 /*!
  * \brief DIO 4 IRQ callback
  */
-IRAM_ATTR void SX1276OnDio4Irq(void *context);
+static void IRAM_ATTR SX1276OnDio4Irq(void *context);
 
 /*!
  * \brief DIO 5 IRQ callback
  */
-IRAM_ATTR void SX1276OnDio5Irq(void *context);
+static void IRAM_ATTR SX1276OnDio5Irq(void *context);
 
 /*!
  * \brief Tx & Rx timeout timer callback
  */
-static void SX1276OnTimeoutIrq(TimerHandle_t timer);
+static void IRAM_ATTR SX1276OnTimeoutIrq(TimerHandle_t timer);
 
 /*
  * Private global constants
@@ -220,9 +220,9 @@ DioIrqHandler *DioIrq[] = {
 /*!
  * Tx and Rx timers
  */
-TimerHandle_t TxTimeoutTimer = NULL;
-TimerHandle_t RxTimeoutTimer = NULL;
-TimerHandle_t RxTimeoutSyncWord = NULL;
+TimerHandle_t TxTimeoutTimer;
+TimerHandle_t RxTimeoutTimer;
+TimerHandle_t RxTimeoutSyncWord;
 
 /*
  * Radio driver functions implementation
@@ -797,9 +797,6 @@ uint32_t SX1276GetTimeOnAir(RadioModems_t modem, uint8_t pktLen)
 
 void SX1276Send(uint8_t *buffer, uint8_t size)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
-
     uint32_t txTimeout = 0;
 
     switch (SX1276.Settings.Modem)
@@ -874,8 +871,6 @@ void SX1276Send(uint8_t *buffer, uint8_t size)
 
 void SX1276SetSleep(void)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     TimerStop(&RxTimeoutTimer);
     TimerStop(&TxTimeoutTimer);
 
@@ -885,8 +880,6 @@ void SX1276SetSleep(void)
 
 void SX1276SetStby(void)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     TimerStop(&RxTimeoutTimer);
     TimerStop(&TxTimeoutTimer);
 
@@ -896,9 +889,6 @@ void SX1276SetStby(void)
 
 void SX1276SetRx(uint32_t timeout)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
-
     bool rxContinuous = false;
     TimerStop(&TxTimeoutTimer);
 
@@ -1045,11 +1035,8 @@ void SX1276SetRx(uint32_t timeout)
     {
         SX1276SetOpMode(RF_OPMODE_RECEIVER);
 
-        if (rxContinuous == false)
-        {
-            TimerSetValue(&RxTimeoutSyncWord, SX1276.Settings.Fsk.RxSingleTimeout);
-            TimerStart(&RxTimeoutSyncWord);
-        }
+        TimerSetValue(&RxTimeoutSyncWord, SX1276.Settings.Fsk.RxSingleTimeout);
+        TimerStart(&RxTimeoutSyncWord);
     }
     else
     {
@@ -1066,9 +1053,6 @@ void SX1276SetRx(uint32_t timeout)
 
 void SX1276SetTx(uint32_t timeout)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-    ESP_LOGD(TAG, "Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
-
     TimerStop(&RxTimeoutTimer);
 
     TimerSetValue(&TxTimeoutTimer, timeout);
@@ -1212,16 +1196,11 @@ int16_t SX1276ReadRssi(RadioModems_t modem)
 
 void SX1276SetOpMode(uint8_t opMode)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     SX1276Write(REG_OPMODE, (SX1276Read(REG_OPMODE) & RF_OPMODE_MASK) | opMode);
 }
 
 void SX1276SetModem(RadioModems_t modem)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-    ESP_LOGD(TAG, "Set Modem type %s", (modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
-
     if ((SX1276Read(REG_OPMODE) & RFLR_OPMODE_LONGRANGEMODE_ON) != 0)
     {
         SX1276.Settings.Modem = MODEM_LORA;
@@ -1237,7 +1216,6 @@ void SX1276SetModem(RadioModems_t modem)
     }
 
     SX1276.Settings.Modem = modem;
-    ESP_LOGD(TAG, "Set Modem type %s", (SX1276.Settings.Modem == MODEM_FSK) ? "MODEM_FSK" : "MODEM_LORA");
     switch (SX1276.Settings.Modem)
     {
     default:
@@ -1260,8 +1238,6 @@ void SX1276SetModem(RadioModems_t modem)
 
 void SX1276Write(uint16_t addr, uint8_t data)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 8;
@@ -1274,8 +1250,6 @@ void SX1276Write(uint16_t addr, uint8_t data)
 
 uint8_t SX1276Read(uint16_t addr)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 8;
@@ -1288,8 +1262,6 @@ uint8_t SX1276Read(uint16_t addr)
 
 void SX1276WriteBuffer(uint16_t addr, uint8_t *buffer, uint8_t size)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = size * 8;
@@ -1301,8 +1273,6 @@ void SX1276WriteBuffer(uint16_t addr, uint8_t *buffer, uint8_t size)
 
 void SX1276ReadBuffer(uint16_t addr, uint8_t *buffer, uint8_t size)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = size * 8;
@@ -1342,8 +1312,6 @@ void SX1276SetMaxPayloadLength(RadioModems_t modem, uint8_t max)
 
 void SX1276SetPublicNetwork(bool enable)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     SX1276SetModem(MODEM_LORA);
     SX1276.Settings.LoRa.PublicNetwork = enable;
     if (enable == true)
@@ -1362,15 +1330,13 @@ uint32_t SX1276GetWakeupTime(void)
 {
     return SX1276GetBoardTcxoWakeupTime() + RADIO_WAKEUP_TIME;
 }
+//volatile uint8_t timeoutCount = 0;
 
-static void SX1276OnTimeoutIrq(TimerHandle_t timer)
+static void IRAM_ATTR SX1276OnTimeoutIrq(TimerHandle_t timer)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     switch (SX1276.Settings.State)
     {
     case RF_RX_RUNNING:
-        ESP_LOGD(TAG, "RF_RX_RUNNING");
         if (SX1276.Settings.Modem == MODEM_FSK)
         {
             SX1276.Settings.FskPacketHandler.PreambleDetected = false;
@@ -1396,13 +1362,20 @@ static void SX1276OnTimeoutIrq(TimerHandle_t timer)
                 TimerStop(&RxTimeoutSyncWord);
             }
         }
+
+        // timeoutCount++;
+        // if (timeoutCount > 5)
+        // {
+        //     timeoutCount = 0;
+        //     RxChainCalibration();
+        // }
+
         if ((RadioEvents != NULL) && (RadioEvents->RxTimeout != NULL))
         {
             RadioEvents->RxTimeout();
         }
         break;
     case RF_TX_RUNNING:
-        ESP_LOGD(TAG, "RF_TX_RUNNING");
 
         // Tx timeout shouldn't happen.
         // But it has been observed that when it happens it is a result of a corrupted SPI transfer
@@ -1438,15 +1411,15 @@ static void SX1276OnTimeoutIrq(TimerHandle_t timer)
             RadioEvents->TxTimeout();
         }
         break;
+    case RF_IDLE:
     default:
         break;
     }
 }
 
-IRAM_ATTR void SX1276OnDio0Irq(void *context)
+// DIO0=PayloadReady
+static void IRAM_ATTR SX1276OnDio0Irq(void *context)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     volatile uint8_t irqFlags = 0;
 
     switch (SX1276.Settings.State)
@@ -1495,7 +1468,8 @@ IRAM_ATTR void SX1276OnDio0Irq(void *context)
             }
 
             // Read received packet size
-            if ((SX1276.Settings.FskPacketHandler.Size == 0) && (SX1276.Settings.FskPacketHandler.NbBytes == 0))
+            if ((SX1276.Settings.FskPacketHandler.Size == 0) &&
+                (SX1276.Settings.FskPacketHandler.NbBytes == 0))
             {
                 if (SX1276.Settings.Fsk.FixLen == false)
                 {
@@ -1629,15 +1603,15 @@ IRAM_ATTR void SX1276OnDio0Irq(void *context)
             break;
         }
         break;
+    case RF_IDLE:
     default:
         break;
     }
 }
 
-IRAM_ATTR void SX1276OnDio1Irq(void *context)
+// DIO1=FifoLevel
+static void IRAM_ATTR SX1276OnDio1Irq(void *context)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     switch (SX1276.Settings.State)
     {
     case RF_RX_RUNNING:
@@ -1646,7 +1620,6 @@ IRAM_ATTR void SX1276OnDio1Irq(void *context)
         case MODEM_FSK:
             // Stop timer
             TimerStop(&RxTimeoutSyncWord);
-
             // FifoLevel interrupt
             // Read received packet size
             if ((SX1276.Settings.FskPacketHandler.Size == 0) && (SX1276.Settings.FskPacketHandler.NbBytes == 0))
@@ -1707,7 +1680,6 @@ IRAM_ATTR void SX1276OnDio1Irq(void *context)
             }
             else
             {
-                // Write the last chunk of data
                 SX1276WriteFifo(RxTxBuffer + SX1276.Settings.FskPacketHandler.NbBytes, SX1276.Settings.FskPacketHandler.Size - SX1276.Settings.FskPacketHandler.NbBytes);
                 SX1276.Settings.FskPacketHandler.NbBytes += SX1276.Settings.FskPacketHandler.Size - SX1276.Settings.FskPacketHandler.NbBytes;
             }
@@ -1718,15 +1690,15 @@ IRAM_ATTR void SX1276OnDio1Irq(void *context)
             break;
         }
         break;
+    case RF_IDLE:
     default:
         break;
     }
 }
 
-IRAM_ATTR void SX1276OnDio2Irq(void *context)
+// DIO2=SyncAddr
+static void IRAM_ATTR SX1276OnDio2Irq(void *context)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     switch (SX1276.Settings.State)
     {
     case RF_RX_RUNNING:
@@ -1734,7 +1706,7 @@ IRAM_ATTR void SX1276OnDio2Irq(void *context)
         {
         case MODEM_FSK:
             // Checks if DIO4 is connected. If it is not PreambleDetected is set to true.
-            if (SX1276.DIO4 == NULL)
+            if (true) //(SX1276.DIO4 == NULL)
             {
                 SX1276.Settings.FskPacketHandler.PreambleDetected = true;
             }
@@ -1790,15 +1762,15 @@ IRAM_ATTR void SX1276OnDio2Irq(void *context)
             break;
         }
         break;
+    case RF_IDLE:
     default:
         break;
     }
 }
 
-IRAM_ATTR void SX1276OnDio3Irq(void *context)
+// DIO3=FifoEmpty
+static void IRAM_ATTR SX1276OnDio3Irq(void *context)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     switch (SX1276.Settings.Modem)
     {
     case MODEM_FSK:
@@ -1828,10 +1800,9 @@ IRAM_ATTR void SX1276OnDio3Irq(void *context)
     }
 }
 
-IRAM_ATTR void SX1276OnDio4Irq(void *context)
+// DIO4=Preamble
+static void IRAM_ATTR SX1276OnDio4Irq(void *context)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     switch (SX1276.Settings.Modem)
     {
     case MODEM_FSK:
@@ -1849,10 +1820,9 @@ IRAM_ATTR void SX1276OnDio4Irq(void *context)
     }
 }
 
-IRAM_ATTR void SX1276OnDio5Irq(void *context)
+// DIO5=ModeReady
+static void IRAM_ATTR SX1276OnDio5Irq(void *context)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
     switch (SX1276.Settings.Modem)
     {
     case MODEM_FSK:

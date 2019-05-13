@@ -3,21 +3,25 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/queue.h>
 
 #include "esp_log.h"
 
 #include "board.h"
 #include "radio.h"
 
+#include "display.h"
+
 static const char *TAG = "radio";
 
-#define RF_FREQUENCY 915000000 // Hz
+#define DEBUG
+#define RF_FREQUENCY 868000000 // Hz
 
-#define TX_OUTPUT_POWER 14 // dBm
+#define TX_OUTPUT_POWER 17 // dBm
 
 #if defined(USE_MODEM_LORA)
 
-#define LORA_BANDWIDTH 0        // [0: 125 kHz,   1: 250 kHz,   2: 500 kHz,   3: Reserved]
+#define LORA_BANDWIDTH          // [0: 125 kHz,   1: 250 kHz,   2: 500 kHz,   3: Reserved]
 #define LORA_SPREADING_FACTOR 7 // [SF7..SF12]
 #define LORA_CODINGRATE 1       // [1: 4/5,  2: 4/6,  3: 4/7,  4: 4/8]
 #define LORA_PREAMBLE_LENGTH 8  // Same for Tx and Rx
@@ -57,7 +61,10 @@ const uint8_t PongMsg[] = "PONG";
 uint16_t BufferSize = BUFFER_SIZE;
 uint8_t Buffer[BUFFER_SIZE];
 
-States_t State = LOWPOWER;
+volatile States_t State = LOWPOWER;
+
+QueueHandle_t display_queue;
+static display_t send_message;
 
 int8_t RssiValue = 0;
 int8_t SnrValue = 0;
@@ -95,6 +102,8 @@ void OnRxError(void);
 void task_radio(void *pvParameter)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    display_queue = (QueueHandle_t *)pvParameter;
 
     bool isMaster = true;
     uint8_t i;
@@ -134,7 +143,7 @@ void task_radio(void *pvParameter)
 
     Radio.SetRxConfig(MODEM_FSK, FSK_BANDWIDTH, FSK_DATARATE,
                       0, FSK_AFC_BANDWIDTH, FSK_PREAMBLE_LENGTH,
-                      0, FSK_FIX_LENGTH_PAYLOAD_ON, 0, true,
+                      10, FSK_FIX_LENGTH_PAYLOAD_ON, 0, true,
                       0, 0, false, true);
 
 #else
@@ -148,7 +157,6 @@ void task_radio(void *pvParameter)
         switch (State)
         {
         case RX:
-            ESP_LOGD(TAG, "State RX");
             if (isMaster == true)
             {
                 if (BufferSize > 0)
@@ -165,7 +173,7 @@ void task_radio(void *pvParameter)
                         {
                             Buffer[i] = i - 4;
                         }
-                        vTaskDelay(1 / portTICK_PERIOD_MS);
+                        vTaskDelay(50 / portTICK_PERIOD_MS);
                         Radio.Send(Buffer, BufferSize);
                     }
                     else if (strncmp((const char *)Buffer, (const char *)PingMsg, 4) == 0)
@@ -207,17 +215,23 @@ void task_radio(void *pvParameter)
                 }
             }
             State = LOWPOWER;
+#ifdef DEBUG
+            ESP_LOGD(TAG, "State RX");
+#endif
             break;
         case TX:
-            ESP_LOGD(TAG, "State TX");
-
+            vTaskDelay(1 / portTICK_PERIOD_MS);
             Radio.Rx(RX_TIMEOUT_VALUE);
             State = LOWPOWER;
+#ifdef DEBUG
+            ESP_LOGD(TAG, "State TX");
+#endif
             break;
         case RX_TIMEOUT:
         case RX_ERROR:
-            ESP_LOGD(TAG, "State ERROR/TIOMOUT");
-
+#ifdef DEBUG
+            ESP_LOGD(TAG, "State %s", State == RX_TIMEOUT ? "RX_TIMEOUT" : "ERROR");
+#endif
             if (isMaster == true)
             {
                 // Send the next PING frame
@@ -225,11 +239,12 @@ void task_radio(void *pvParameter)
                 Buffer[1] = 'I';
                 Buffer[2] = 'N';
                 Buffer[3] = 'G';
+                
                 for (i = 4; i < BufferSize; i++)
                 {
                     Buffer[i] = i - 4;
                 }
-                vTaskDelay(1 / portTICK_PERIOD_MS);
+                vTaskDelay(50 / portTICK_PERIOD_MS);
                 Radio.Send(Buffer, BufferSize);
             }
             else
@@ -239,19 +254,21 @@ void task_radio(void *pvParameter)
             State = LOWPOWER;
             break;
         case TX_TIMEOUT:
+#ifdef DEBUG
             ESP_LOGD(TAG, "State TX_TIMEOUT");
-
+#endif
             Radio.Rx(RX_TIMEOUT_VALUE);
             State = LOWPOWER;
             break;
         case LOWPOWER:
         default:
-            ESP_LOGD(TAG, "State LOWPOWER/DEFAULT");
+#ifdef DEBUG
+            //ESP_LOGD(TAG, "State LOWPOWER/DEFAULT");
+#endif
+            vTaskDelay(50 / portTICK_PERIOD_MS);
             // Set low power
             break;
         }
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-
         //TimerLowPowerHandler();
     }
     vTaskDelete(NULL);
@@ -259,44 +276,71 @@ void task_radio(void *pvParameter)
 
 void OnTxDone(void)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
+#ifdef DEBUG
+    ets_printf("D (%d) %s: %s\n", esp_log_timestamp(), TAG, __FUNCTION__);
+#endif
     Radio.Sleep();
     State = TX;
+    //send_message.status = "TxDone";
+    //xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
 }
 
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
+#ifdef DEBUG
+    ets_printf("D (%d) %s: %s\n", esp_log_timestamp(), TAG, __FUNCTION__);
+#endif
     Radio.Sleep();
     BufferSize = size;
     memcpy(Buffer, payload, BufferSize);
+
+#ifdef DEBUG
+    ets_printf("D (%d) %s: %s, size %d\n", esp_log_timestamp(), TAG, Buffer, BufferSize);
+#endif
     RssiValue = rssi;
     SnrValue = snr;
     State = RX;
+
+    send_message.rssi_value = rssi;
+    send_message.snr_value = snr;
+    send_message.status = "RxDone";
+    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
 }
 
 void OnTxTimeout(void)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
+#ifdef DEBUG
+    ets_printf("D (%d) %s: %s\n", esp_log_timestamp(), TAG, __FUNCTION__);
+#endif
     Radio.Sleep();
     State = TX_TIMEOUT;
+
+    send_message.status = "TxTimeout";
+    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
 }
 
 void OnRxTimeout(void)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
+#ifdef DEBUG
+    ets_printf("D (%d) %s: %s\n", esp_log_timestamp(), TAG, __FUNCTION__);
+#endif
     Radio.Sleep();
     State = RX_TIMEOUT;
+
+    send_message.status = "RxTimeout";
+    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
 }
 
 void OnRxError(void)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
-
+#ifdef DEBUG
+    ets_printf("D (%d) %s: %s\n", esp_log_timestamp(), TAG, __FUNCTION__);
+#endif
     Radio.Sleep();
     State = RX_ERROR;
+
+    send_message.status = "RxError";
+    send_message.rssi_value = 0;
+    send_message.snr_value = 0;
+    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
 }

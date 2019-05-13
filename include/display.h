@@ -4,16 +4,13 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "freertos/queue.h"
-
 typedef struct
 {
-    int8_t rssi_value;
+    int16_t rssi_value;
+    int8_t snr_value;
     float freq_value;
-    char *modulation_type;
+    char *status;
 } display_t;
-
-QueueHandle_t display_queue;
 
 void task_display(void *ignore);
 

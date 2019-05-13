@@ -3,14 +3,13 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include "freertos/queue.h"
+
 #include <u8g2.h>
 
-// #include <driver/gpio.h>
-// #include <driver/spi_master.h>
 #include "esp_log.h"
 #include "esp_err.h"
 
-#include "sdkconfig.h"
 #include "u8g2_esp32_hal.h"
 #include "display.h"
 #include "hardware.h"
@@ -20,8 +19,9 @@ static const char *TAG = "display";
 void task_display(void *pvParameters)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
+    esp_log_level_set("u8g2_hal", ESP_LOG_NONE);
 
-    display_queue = (QueueHandle_t *)pvParameters;
+    QueueHandle_t display_queue = (QueueHandle_t *)pvParameters;
 
     display_t message;
 
@@ -50,18 +50,24 @@ void task_display(void *pvParameters)
             continue;
         }
 
-        while (xQueueReceive(display_queue, &message, portMAX_DELAY) == pdTRUE)
+        while (xQueueReceive(display_queue, &message, 500 / portTICK_PERIOD_MS) == pdTRUE)
         {
             char rssi_string[12];
             sprintf(rssi_string, "RSSI= %4d dB", message.rssi_value);
-            char freq_string[10];
-            sprintf(freq_string, "Freq= %.1f MHz", message.freq_value);
+            char snr_string[10];
+            sprintf(snr_string, "Snr= %4d", message.snr_value);
+            char status_string[10];
+            sprintf(status_string, "%s", message.status);
+            // char freq_string[10];
+            // sprintf(freq_string, "Freq= %.1f MHz", message.freq_value);
 
             u8g2_ClearBuffer(&u8g2);
 
             u8g2_SetFont(&u8g2, u8g2_font_courR08_tr);
             u8g2_DrawStr(&u8g2, 0, 8, rssi_string);
-            u8g2_DrawStr(&u8g2, 0, 20, freq_string);
+            //u8g2_DrawStr(&u8g2, 0, 20, freq_string);
+            u8g2_DrawStr(&u8g2, 0, 16+1, snr_string);
+            u8g2_DrawStr(&u8g2, 0, 26, status_string);
             u8g2_SendBuffer(&u8g2);
         }
         vTaskDelay(500 / portTICK_PERIOD_MS); //wait for 500 ms

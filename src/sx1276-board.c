@@ -78,12 +78,20 @@ void SX1276IoInit(void)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
-    gpio_config_t sx1267_dio = {
+     gpio_config_t sx1267_dio = {
         .mode = GPIO_MODE_INPUT,
-        .intr_type = GPIO_PIN_INTR_POSEDGE,
-        //.pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_ENABLE,
-        .pin_bit_mask = GPIO_INPUT_PIN_SEL};
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        //.pull_down_en = GPIO_PULLDOWN_ENABLE,
+        .pin_bit_mask = GPIO_INPUT_PIN_SEL,
+        .intr_type = GPIO_PIN_INTR_DISABLE};
+    ESP_ERROR_CHECK(gpio_config(&sx1267_dio));
+
+    // setup reset and slave select pin
+    sx1267_dio.pin_bit_mask = BIT(RADIO_RESET);
+    sx1267_dio.mode = GPIO_MODE_OUTPUT;
+    sx1267_dio.pull_up_en = GPIO_PULLUP_DISABLE;
+    sx1267_dio.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    sx1267_dio.intr_type = GPIO_PIN_INTR_DISABLE;
     ESP_ERROR_CHECK(gpio_config(&sx1267_dio));
 
     SX1276.Reset = RADIO_RESET;
@@ -97,15 +105,15 @@ void SX1276IoIrqInit(DioIrqHandler **irqHandlers)
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT));
-// #ifdef RADIO_DIO_0
-//     ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_0, (void *)irqHandlers[0], NULL));
-// #endif
-// #ifdef RADIO_DIO_1
-//     ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_1, (void *)irqHandlers[1], NULL));
-// #endif
-// #ifdef RADIO_DIO_2
-//     ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_2, (void *)irqHandlers[2], NULL));
-// #endif
+#ifdef RADIO_DIO_0
+    ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_0, (gpio_isr_t)irqHandlers[0], NULL));
+#endif
+#ifdef RADIO_DIO_1
+    ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_1, (gpio_isr_t)irqHandlers[1], NULL));
+#endif
+#ifdef RADIO_DIO_2
+    ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_2, (gpio_isr_t)irqHandlers[2], NULL));
+#endif
 #ifdef RADIO_DIO_3
     ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_3, irqHandlers[3], NULL));
 #endif
@@ -115,10 +123,45 @@ void SX1276IoIrqInit(DioIrqHandler **irqHandlers)
 #ifdef RADIO_DIO_5
     ESP_ERROR_CHECK(gpio_isr_handler_add(RADIO_DIO_5, irqHandlers[5], NULL));
 #endif
+
+    gpio_config_t sx1267_dio = {
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .pin_bit_mask = GPIO_INPUT_PIN_SEL,
+        .intr_type = GPIO_PIN_INTR_POSEDGE};
+    ESP_ERROR_CHECK(gpio_config(&sx1267_dio));
 }
 
 void SX1276IoDeInit(void)
 {
+    // disable pin interrupts
+    gpio_config_t sx1276_io;
+    sx1276_io.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    sx1276_io.mode = GPIO_MODE_INPUT;
+    sx1276_io.pull_up_en = GPIO_PULLDOWN_DISABLE;
+    sx1276_io.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    sx1276_io.intr_type = GPIO_PIN_INTR_DISABLE;
+    gpio_config(&sx1276_io);
+
+#ifdef RADIO_DIO_0
+    ESP_ERROR_CHECK(gpio_isr_handler_remove(RADIO_DIO_0));
+#endif
+#ifdef RADIO_DIO_1
+    ESP_ERROR_CHECK(gpio_isr_handler_remove(RADIO_DIO_1));
+#endif
+#ifdef RADIO_DIO_2
+    ESP_ERROR_CHECK(gpio_isr_handler_remove(RADIO_DIO_2));
+#endif
+#ifdef RADIO_DIO_3
+    ESP_ERROR_CHECK(gpio_isr_handler_remove(RADIO_DIO_3));
+#endif
+#ifdef RADIO_DIO_4
+    ESP_ERROR_CHECK(gpio_isr_handler_remove(RADIO_DIO_4));
+#endif
+#ifdef RADIO_DIO_5
+    ESP_ERROR_CHECK(gpio_isr_handler_remove(RADIO_DIO_5));
+#endif
 }
 
 uint32_t SX1276GetBoardTcxoWakeupTime(void)
@@ -129,7 +172,7 @@ uint32_t SX1276GetBoardTcxoWakeupTime(void)
 void SX1276Reset(void)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
-    
+
     // Set RESET pin to 0
     ESP_ERROR_CHECK(gpio_set_level(SX1276.Reset, 0));
 
