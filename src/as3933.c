@@ -6,6 +6,24 @@
 #include "driver/spi_master.h"
 #include "hardware.h"
 #include "as3933.h"
+#include "as3933_regs.h"
+
+as3933_init_cmd_t as3933_config_register[] = {
+    // AS3933 default settings for approx. 9m LF range
+    {R0, 0x6E},
+    {R1, 0x2A}, // AGC_T-LIM = 0 Had improved stability (RSSI value constant), but was causing lost LF. Changed back
+    {R2, 0x20},
+    {R3, 0x3F},
+    {R4, 0x30}, // reduce Off time.
+    {R5, 0x69},
+    {R6, 0x96},
+    {R7, 0x3F},
+    {R8, 0x00},
+    {R9, 0x00},
+    {R16, 0x00},
+    {R17, 0x00},
+    {R18, 0x00},
+    {R19, 0x00}};
 
 static const char *TAG = "as3933";
 
@@ -23,11 +41,11 @@ void as3933_spi_init()
         .quadhd_io_num = -1};
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = SPI_MASTER_FREQ_10M / 5, //Clock out at 10 MHz
-        .mode = 1,                         //SPI mode 1
-        .spics_io_num = RFID_CS,           //CS pin
+        .clock_speed_hz = SPI_MASTER_FREQ_10M / 2, //Clock out at 10 MHz
+        .mode = 1,                                 //SPI mode 1
+        .spics_io_num = RFID_CS,                   //CS pin
         .flags = SPI_DEVICE_POSITIVE_CS,
-        .queue_size = 1,                   //We want to be able to queue 7 transactions at a time
+        .queue_size = 1, //We want to be able to queue 7 transactions at a time
         .command_bits = 8};
 
     //Initialize the SPI bus
@@ -36,13 +54,12 @@ void as3933_spi_init()
     ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &as3933));
 }
 
-
 void as3933_cmd(cmd_t cmd)
 {
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 0;
-    t.cmd = cmd | 0xC0;
+    t.cmd = cmd | DIRECT_COMMAND;
     //t.flags = SPI_TRANS_USE_TXDATA;
 
     ESP_ERROR_CHECK(spi_device_polling_transmit(as3933, &t));
@@ -53,7 +70,7 @@ void as3933_write(uint8_t addr, uint8_t data)
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 8;
-    t.cmd = addr & 0x3F;
+    t.cmd = addr & WRITE;
     t.flags = SPI_TRANS_USE_TXDATA;
     t.tx_data[0] = data;
 
@@ -65,7 +82,7 @@ uint8_t as3933_read(uint8_t addr)
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 8;
-    t.cmd = addr | 0x40;
+    t.cmd = addr | READ;
     t.flags = SPI_TRANS_USE_RXDATA;
 
     ESP_ERROR_CHECK(spi_device_polling_transmit(as3933, &t));
