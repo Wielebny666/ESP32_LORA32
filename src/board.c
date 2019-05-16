@@ -17,16 +17,16 @@ void SpiInit()
         .quadhd_io_num = -1};
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 1 * 1000 * 1000, //Clock out at 10 MHz
+        .clock_speed_hz = SPI_MASTER_FREQ_10M, //Clock out at 10 MHz
         .mode = 0,                         //SPI mode 0
         .spics_io_num = RADIO_NSS,         //CS pin
         .queue_size = 1,                   //We want to be able to queue 7 transactions at a time
         .command_bits = 8};
 
     //Initialize the SPI bus
-    ESP_ERROR_CHECK(spi_bus_initialize(HSPI_HOST, &buscfg, 0));
+    ESP_ERROR_CHECK(spi_bus_initialize(VSPI_HOST, &buscfg, 0));
     //Attach the Device to the SPI bus
-    ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &SX1276.Spi));
+    ESP_ERROR_CHECK(spi_bus_add_device(VSPI_HOST, &devcfg, &SX1276.Spi));
 
     SX1276IoInit();
 }

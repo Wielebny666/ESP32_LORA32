@@ -8,6 +8,13 @@
 // SCL - GPIO22
 #define PIN_I2C_SCL GPIO_NUM_22
 
+
+#define RFID_MOSI GPIO_NUM_13
+#define RFID_MISO GPIO_NUM_12
+#define RFID_SCLK GPIO_NUM_14
+#define RFID_CS GPIO_NUM_15
+
+
 //SX1276 SPI & IO
 #define RADIO_RESET GPIO_NUM_23
 
@@ -17,12 +24,14 @@
 #define RADIO_NSS GPIO_NUM_18
 
 #define RADIO_DIO_0 GPIO_NUM_26
-#define RADIO_DIO_1 GPIO_NUM_15
-#define RADIO_DIO_2 GPIO_NUM_13
+#define RADIO_DIO_1 GPIO_NUM_34
+#define RADIO_DIO_2 GPIO_NUM_35
 // #define RADIO_DIO_2 GPIO_NUM_23
 // #define RADIO_DIO_3                                 GPIO_NUM_26
 // #define RADIO_DIO_4                                 GPIO_NUM_26
 // #define RADIO_DIO_5                                 GPIO_NUM_26
+
+#define RADIO_WAKEUP_LEVEL_DEFAULT 0
 
 //GREEN LED
 #ifdef TTGO
@@ -38,7 +47,6 @@
 //#define RMT_RX_GPIO_NUM GPIO_NUM_16 //cc1101 Tx
 #define RMT_RX_GPIO_NUM GPIO_NUM_15 //sx1276 Tx
 //#define RMT_RX_GPIO_NUM GPIO_NUM_12
-
 
 // #define PIN_NUM_TXD UART_NUM_2_TXD_DIRECT_GPIO_NUM
 // #define PIN_NUM_RXD UART_NUM_2_RXD_DIRECT_GPIO_NUM

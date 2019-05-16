@@ -4,24 +4,29 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h>
 
+#include "driver/rtc_io.h"
+#include "esp_sleep.h"
 #include "esp_log.h"
 
 #include "board.h"
 #include "radio.h"
 
 #include "display.h"
+#include "led.h"
+#include "hardware.h"
 
 static const char *TAG = "radio";
 
 #define DEBUG
 #define RF_FREQUENCY 868000000 // Hz
 
-#define TX_OUTPUT_POWER 17 // dBm
+#define TX_OUTPUT_POWER 20 // dBm
 
 #if defined(USE_MODEM_LORA)
 
-#define LORA_BANDWIDTH          // [0: 125 kHz,   1: 250 kHz,   2: 500 kHz,   3: Reserved]
+#define LORA_BANDWIDTH 1        // [0: 125 kHz,   1: 250 kHz,   2: 500 kHz,   3: Reserved]
 #define LORA_SPREADING_FACTOR 7 // [SF7..SF12]
 #define LORA_CODINGRATE 1       // [1: 4/5,  2: 4/6,  3: 4/7,  4: 4/8]
 #define LORA_PREAMBLE_LENGTH 8  // Same for Tx and Rx
@@ -69,40 +74,23 @@ static display_t send_message;
 int8_t RssiValue = 0;
 int8_t SnrValue = 0;
 
-/*!
- * Radio events function pointer
- */
 static RadioEvents_t RadioEvents;
 
-/*!
- * \brief Function to be executed on Radio Tx Done event
- */
 void OnTxDone(void);
-
-/*!
- * \brief Function to be executed on Radio Rx Done event
- */
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr);
-
-/*!
- * \brief Function executed on Radio Tx Timeout event
- */
 void OnTxTimeout(void);
-
-/*!
- * \brief Function executed on Radio Rx Timeout event
- */
 void OnRxTimeout(void);
-
-/*!
- * \brief Function executed on Radio Rx Error event
- */
 void OnRxError(void);
+
+static TaskHandle_t task;
 
 void task_radio(void *pvParameter)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
+    xTaskCreatePinnedToCore(task_led, "blink_task", 3072, xTaskGetCurrentTaskHandle(), 5, &task, 1);
+
+    assert(pvParameter);
     display_queue = (QueueHandle_t *)pvParameter;
 
     bool isMaster = true;
@@ -173,7 +161,7 @@ void task_radio(void *pvParameter)
                         {
                             Buffer[i] = i - 4;
                         }
-                        vTaskDelay(50 / portTICK_PERIOD_MS);
+                        vTaskDelay(100 / portTICK_PERIOD_MS);
                         Radio.Send(Buffer, BufferSize);
                     }
                     else if (strncmp((const char *)Buffer, (const char *)PingMsg, 4) == 0)
@@ -239,12 +227,12 @@ void task_radio(void *pvParameter)
                 Buffer[1] = 'I';
                 Buffer[2] = 'N';
                 Buffer[3] = 'G';
-                
+
                 for (i = 4; i < BufferSize; i++)
                 {
                     Buffer[i] = i - 4;
                 }
-                vTaskDelay(50 / portTICK_PERIOD_MS);
+                vTaskDelay(1 / portTICK_PERIOD_MS);
                 Radio.Send(Buffer, BufferSize);
             }
             else
@@ -263,13 +251,11 @@ void task_radio(void *pvParameter)
         case LOWPOWER:
         default:
 #ifdef DEBUG
-            //ESP_LOGD(TAG, "State LOWPOWER/DEFAULT");
+            ESP_LOGD(TAG, "State LOWPOWER/DEFAULT");
 #endif
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-            // Set low power
+            vTaskDelay(300 / portTICK_PERIOD_MS);
             break;
         }
-        //TimerLowPowerHandler();
     }
     vTaskDelete(NULL);
 }
@@ -281,12 +267,15 @@ void OnTxDone(void)
 #endif
     Radio.Sleep();
     State = TX;
-    //send_message.status = "TxDone";
-    //xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
+    send_message.status = "TxDone";
+    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
 }
 
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xTaskNotifyFromISR(task, 0, eNoAction, &xHigherPriorityTaskWoken);
+
 #ifdef DEBUG
     ets_printf("D (%d) %s: %s\n", esp_log_timestamp(), TAG, __FUNCTION__);
 #endif

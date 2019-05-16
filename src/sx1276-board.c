@@ -80,7 +80,7 @@ void SX1276IoInit(void)
 
      gpio_config_t sx1267_dio = {
         .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
+        //.pull_up_en = GPIO_PULLUP_ENABLE,
         //.pull_down_en = GPIO_PULLDOWN_ENABLE,
         .pin_bit_mask = GPIO_INPUT_PIN_SEL,
         .intr_type = GPIO_PIN_INTR_DISABLE};
@@ -126,8 +126,8 @@ void SX1276IoIrqInit(DioIrqHandler **irqHandlers)
 
     gpio_config_t sx1267_dio = {
         .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        //.pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
         .pin_bit_mask = GPIO_INPUT_PIN_SEL,
         .intr_type = GPIO_PIN_INTR_POSEDGE};
     ESP_ERROR_CHECK(gpio_config(&sx1267_dio));
@@ -139,8 +139,8 @@ void SX1276IoDeInit(void)
     gpio_config_t sx1276_io;
     sx1276_io.pin_bit_mask = GPIO_INPUT_PIN_SEL;
     sx1276_io.mode = GPIO_MODE_INPUT;
-    sx1276_io.pull_up_en = GPIO_PULLDOWN_DISABLE;
-    sx1276_io.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    // sx1276_io.pull_up_en = GPIO_PULLDOWN_DISABLE;
+    // sx1276_io.pull_down_en = GPIO_PULLDOWN_DISABLE;
     sx1276_io.intr_type = GPIO_PIN_INTR_DISABLE;
     gpio_config(&sx1276_io);
 
