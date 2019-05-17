@@ -28,12 +28,13 @@ void app_main()
 
     as3933_spi_init();
     as3933_reset();
-
+    as3933_band_select(125000);
+    as3933_band_select(50000);
     while (1)
     {
-        uint8_t test5 = as3933_read(5);
-        uint8_t test6 = as3933_read(6);
-        ESP_LOGD(TAG, "%x %x", test5, test6);
+        // uint8_t test5 = as3933_read(5);
+        // uint8_t test6 = as3933_read(6);
+        // ESP_LOGD(TAG, "%x %x", test5, test6);
     }
 
     QueueHandle_t display_queue = xQueueCreate(10, sizeof(display_t));

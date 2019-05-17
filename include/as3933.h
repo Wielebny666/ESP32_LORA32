@@ -2,6 +2,8 @@
 #define __AS3933_H__
 
 #include <stdint.h>
+#include "driver/spi_master.h"
+#include "as3933_regs.h"
 
 typedef struct
 {
@@ -44,5 +46,6 @@ void as3933_write_buffer(uint16_t addr, uint8_t *buffer, uint8_t size);
 void as3933_read_buffer(uint16_t addr, uint8_t *buffer, uint8_t size);
 
 void as3933_reset();
+void as3933_band_select(uint32_t freq);
 
 #endif

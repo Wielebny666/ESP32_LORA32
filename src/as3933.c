@@ -3,10 +3,8 @@
 #include "esp_log.h"
 #include "esp_err.h"
 
-#include "driver/spi_master.h"
 #include "hardware.h"
 #include "as3933.h"
-#include "as3933_regs.h"
 
 as3933_init_cmd_t as3933_config_register[] = {
     // AS3933 default settings for approx. 9m LF range
@@ -120,36 +118,68 @@ void as3933_init()
 {
 }
 
-void as3933_crystal_osc_select(bool select){
-
+void as3933_crystal_osc_select(bool select)
+{
 }
 
-void as3933_set_channel(uint8_t chan_nr, bool value){
-
+void as3933_set_channel(uint8_t channel, bool value)
+{
 }
 
-void as3933_set_manchaster_decode(bool select){
-
+void as3933_set_manchaster_decode(bool select)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+    uint8_t resp = as3933_read(R1);
+    r1_t *r1 = (r1_t *)resp;
+    r1->en_manch = select;
+    as3933_write(R1, resp);
 }
 
-void as3933_set_bitrate(uint8_t value){
-
+void as3933_set_bitrate(uint8_t value)
+{
 }
 
-void as3933_band_select(uint8_t value){
+void as3933_band_select(uint32_t freq)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
 
+    uint8_t resp = as3933_read(R8);
+    r8_t *r8 = (r8_t *)resp;
+    ESP_LOGD(TAG, "resp %x", resp);
+    ESP_LOGD(TAG, "band_sel %x", r8->band_sel);
+    if (freq >= 15000 && freq < 23000)
+    {
+        r8->band_sel = RANGE_15_23KHZ;
+    }
+    if (freq >= 23000 && freq < 40000)
+    {
+        r8->band_sel = RANGE_23_40KHZ;
+    }
+    if (freq >= 40000 && freq < 65000)
+    {
+        r8->band_sel = RANGE_40_65KHZ;
+    }
+    if (freq >= 65000 && freq < 95000)
+    {
+        r8->band_sel = RANGE_65_95KHZ;
+    }
+    if (freq >= 95000 && freq <= 150000)
+    {
+        r8->band_sel = RANGE_95_150KHZ;
+    }
+    as3933_write(R8, resp);
 }
 
-void as3933_set_route_res_freq_on_dat(uint8_t channel, bool value){
-
+void as3933_set_route_res_freq_on_dat(uint8_t channel, bool value)
+{
 }
 
-void as3933_set_capacity(uint8_t channel, uint8_t value){
-
+void as3933_set_capacity(uint8_t channel, uint8_t value)
+{
 }
 
-void as3933_set_config(){
-
+void as3933_set_config()
+{
 }
 
 static void IRAM_ATTR as3933_on_wake_up_irq(void *context)
