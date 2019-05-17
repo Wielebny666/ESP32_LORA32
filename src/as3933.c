@@ -115,3 +115,43 @@ void as3933_reset()
 {
     as3933_cmd(PRESET_DEFAULT);
 }
+
+void as3933_init()
+{
+}
+
+void as3933_crystal_osc_select(bool select){
+
+}
+
+void as3933_set_channel(uint8_t chan_nr, bool value){
+
+}
+
+void as3933_set_manchaster_decode(bool select){
+
+}
+
+void as3933_set_bitrate(uint8_t value){
+
+}
+
+void as3933_band_select(uint8_t value){
+
+}
+
+void as3933_set_route_res_freq_on_dat(uint8_t channel, bool value){
+
+}
+
+void as3933_set_capacity(uint8_t channel, uint8_t value){
+
+}
+
+void as3933_set_config(){
+
+}
+
+static void IRAM_ATTR as3933_on_wake_up_irq(void *context)
+{
+}
