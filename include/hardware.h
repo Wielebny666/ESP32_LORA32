@@ -24,6 +24,7 @@
 #define RADIO_NSS GPIO_NUM_18
 
 #define RADIO_DIO_0 GPIO_NUM_26
+//outside
 #define RADIO_DIO_1 GPIO_NUM_34
 #define RADIO_DIO_2 GPIO_NUM_35
 // #define RADIO_DIO_2 GPIO_NUM_23

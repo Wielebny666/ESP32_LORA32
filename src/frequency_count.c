@@ -24,10 +24,13 @@
  */
 
 #include <string.h>
+#include <math.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
+
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/pcnt.h"
@@ -56,14 +59,14 @@ static void init_rmt(uint8_t tx_gpio, rmt_channel_t channel, uint8_t clk_div)
     ESP_ERROR_CHECK(rmt_driver_install(rmt_tx.channel, 0, 0));
 }
 
-static int create_rmt_window(rmt_item32_t *items, double sampling_window_seconds, double rmt_period)
+static uint32_t create_rmt_window(rmt_item32_t *items, double sampling_window_seconds, double rmt_period)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
-    int num_items = 0;
+    uint32_t num_items = 0;
 
     // enable counter for exactly x seconds:
-    int32_t total_duration = (uint32_t)(sampling_window_seconds / rmt_period);
+    uint32_t total_duration = (uint32_t)(sampling_window_seconds / rmt_period);
     ESP_LOGD(TAG, "total_duration %f seconds = %d * %g seconds", sampling_window_seconds, total_duration, rmt_period);
 
     // max duration per item is 2^15-1 = 32767
@@ -98,7 +101,7 @@ static int create_rmt_window(rmt_item32_t *items, double sampling_window_seconds
     return num_items;
 }
 
-static void init_pcnt(uint8_t pulse_gpio, uint8_t ctrl_gpio, pcnt_unit_t unit, pcnt_channel_t channel, uint16_t filter_length)
+static void init_pcnt(uint8_t pulse_gpio, uint8_t ctrl_gpio, pcnt_unit_t unit, pcnt_channel_t channel, uint16_t pcnt_filter_length)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
@@ -122,7 +125,7 @@ static void init_pcnt(uint8_t pulse_gpio, uint8_t ctrl_gpio, pcnt_unit_t unit, p
     ESP_ERROR_CHECK(gpio_set_pull_mode(pulse_gpio, GPIO_FLOATING));
 
     // enable counter filter - at 80MHz APB CLK, 1000 pulses is max 80,000 Hz, so ignore pulses less than 12.5 us.
-    ESP_ERROR_CHECK(pcnt_set_filter_value(unit, filter_length));
+    ESP_ERROR_CHECK(pcnt_set_filter_value(unit, pcnt_filter_length));
     ESP_ERROR_CHECK(pcnt_filter_enable(unit));
 }
 
@@ -136,7 +139,7 @@ void frequency_count_task_function(void *pvParameter)
     configuration = *(frequency_count_configuration_t *)pvParameter;
     frequency_count_configuration_t *task_inputs = &configuration;
 
-    ESP_LOGI(TAG, "pcnt_gpio %d, pcnt_unit %d, pcnt_channel %d, rmt_gpio %d, rmt_clk_div %d, sampling_period_seconds %f, sampling_window_seconds %f, filter_length %d",
+    ESP_LOGI(TAG, "pcnt_gpio %d, pcnt_unit %d, pcnt_channel %d, rmt_gpio %d, rmt_clk_div %d, sampling_period_seconds %f, sampling_window_seconds %f, pcnt_filter_length %d",
              task_inputs->pcnt_gpio,
              task_inputs->pcnt_unit,
              task_inputs->pcnt_channel,
@@ -144,25 +147,27 @@ void frequency_count_task_function(void *pvParameter)
              task_inputs->rmt_clk_div,
              task_inputs->sampling_period_seconds,
              task_inputs->sampling_window_seconds,
-             task_inputs->filter_length);
+             task_inputs->pcnt_filter_length);
 
     init_rmt(task_inputs->rmt_gpio, task_inputs->rmt_channel, task_inputs->rmt_clk_div);
-    init_pcnt(task_inputs->pcnt_gpio, task_inputs->rmt_gpio, task_inputs->pcnt_unit, task_inputs->pcnt_channel, task_inputs->filter_length);
+    init_pcnt(task_inputs->pcnt_gpio, task_inputs->rmt_gpio, task_inputs->pcnt_unit, task_inputs->pcnt_channel, task_inputs->pcnt_filter_length);
 
     // assuming 80MHz APB clock
     const double rmt_period = (double)(task_inputs->rmt_clk_div) / 80000000.0;
 
-    const size_t items_size = RMT_MEM_BLOCK_BYTE_NUM * task_inputs->rmt_max_blocks;
+    uint8_t req_blocks = (uint8_t)ceil((task_inputs->sampling_window_seconds / ((2.0 * 32767.0) / (80000000.0 / task_inputs->rmt_clk_div))) / RMT_MEM_ITEM_NUM);
+    assert(req_blocks < 8);
+    const size_t items_size = RMT_MEM_BLOCK_BYTE_NUM * req_blocks;
     rmt_item32_t *rmt_items = malloc(items_size);
     assert(rmt_items);
     memset(rmt_items, 0, items_size);
-    int num_rmt_items = create_rmt_window(rmt_items, task_inputs->sampling_window_seconds, rmt_period);
-    assert(num_rmt_items <= task_inputs->rmt_max_blocks * RMT_MEM_ITEM_NUM);
+    uint32_t num_rmt_items = create_rmt_window(rmt_items, task_inputs->sampling_window_seconds, rmt_period);
+    assert(num_rmt_items <= req_blocks * RMT_MEM_ITEM_NUM);
 
     TickType_t last_wake_time = xTaskGetTickCount();
     double frequency_hz;
 
-    while (1)
+    while (xTaskNotifyWait(0, 0, NULL, portMAX_DELAY) == pdTRUE)
     {
         last_wake_time = xTaskGetTickCount();
 
@@ -187,15 +192,13 @@ void frequency_count_task_function(void *pvParameter)
 
         // TODO: check for overflow?
 
-        frequency_hz = count / 2.0 / task_inputs->sampling_window_seconds;
+        frequency_hz = abs(count / 2.0 / task_inputs->sampling_window_seconds);
 
         // call the frequency update callback
         if (task_inputs->frequency_update_callback)
         {
             (task_inputs->frequency_update_callback)(frequency_hz);
         }
-
-        ESP_LOGD(TAG, "counter %d, frequency %f Hz", count, frequency_hz);
 
         int delay_time = task_inputs->sampling_period_seconds * 1000 / portTICK_PERIOD_MS;
         if (delay_time > 0)
@@ -205,6 +208,6 @@ void frequency_count_task_function(void *pvParameter)
     }
 
     free(rmt_items);
-    free(task_inputs); // TODO: avoid this if not dynamically allocated
+    //free(task_inputs); // TODO: avoid this if not dynamically allocated
     vTaskDelete(NULL);
 }

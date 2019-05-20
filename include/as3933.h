@@ -16,7 +16,7 @@ typedef struct
 {
     bool Manchester;
     int16_t WakeUpPattern;
-    bool Pattern_16bit; 
+    bool Pattern_16bit;
     uint8_t Bitrate;
     uint8_t Frequency;
     RfIdPacketHandler_t PacketHandler;
@@ -30,6 +30,20 @@ typedef struct as3933_s
     spi_device_handle_t Spi;
     RfIdSettings_t Settings;
 } as3933_t;
+
+typedef enum
+{
+    LM_STANDARD,
+    LM_SCANNING,
+    LM_ON_OFF
+} listening_mode_t;
+
+typedef enum
+{
+    WK_FREQ_DET_ONLY,
+    WK_SINGLE_PATTERN
+} wake_up_mode_t;
+
 
 /*!
  * Hardware IO IRQ callback function definition
@@ -48,4 +62,28 @@ void as3933_read_buffer(uint16_t addr, uint8_t *buffer, uint8_t size);
 void as3933_reset();
 void as3933_band_select(uint32_t freq);
 
+void as3933_set_channel(uint8_t channel, bool value);
+void as3933_set_manchaster_decode(bool select);
+void as3933_set_patern_correlation(wake_up_mode_t mode);
+void as3933_set_wakeup_pattern_16bit(uint16_t wakeup_node_id);
+void as3933_set_wakeup_pattern_8bit(uint8_t wakeup_node_id);
+void as3933_set_bitrate(uint8_t value);
+void as3933_band_select(uint32_t freq);
+void as3933_route_res_freq_on_dat(uint8_t channel, bool value);
+void as3933_route_clock_on_dat(bool value);
+void as3933_set_xtal_osc(bool value);
+// 0 - 31 pF
+void as3933_set_capacity(uint8_t channel, uint8_t value);
+uint8_t as3933_get_rssi(uint8_t channel);
+bool as3933_get_rc_osc_calibrate_status();
+void as3933_agc(bool value);
+void as3933_set_min_preamble_length(fs_slc_t len);
+void as3933_set_listening_mode(listening_mode_t mode);
+
+//commands
+void as3933_clear_wake_up();
+void as3933_calibrate_rco_lc();
+void as3933_reset_rssi();
+
+bool as3933_rc_osc_self_calibrate();
 #endif
