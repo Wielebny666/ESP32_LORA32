@@ -435,6 +435,59 @@ void as3933_set_listening_mode(listening_mode_t mode)
     as3933_write(R0, r0.reg);
 }
 
+void as3933_set_freq_tolerance(s_wu1_t value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r2_t r2 = {
+        .reg = as3933_read(R2)};
+    r2.s_wu1 = value;
+    as3933_write(R2, r2.reg);
+}
+
+void as3933_set_gain_reduction(gr_t value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r4_t r4 = {
+        .reg = as3933_read(R4)};
+    r4.gr = value;
+    as3933_write(R4, r4.reg);
+}
+
+void as3933_enable_antenna_damper(bool value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r1_t r1 = {
+        .reg = as3933_read(R1)};
+    r1.att_on = value;
+    as3933_write(R1, r1.reg);
+}
+
+void as3933_set_antenna_damper(r_val_t value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r4_t r4 = {
+        .reg = as3933_read(R4)};
+
+    r4.r_val = value;
+
+    as3933_write(R4, r4.reg);
+}
+
+void as3933_set_comparator_hysteresis(comp_hyst_t value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r3_t r3 = {
+        .reg = as3933_read(R3)};
+    r3.hy_pos = value;
+    r3.hy_20m = value >> 1;
+    as3933_write(R3, r3.reg);
+}
+
 void as3933_clear_wake_up()
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);

@@ -109,6 +109,7 @@ void app_main()
     // }
 
     config_led();
+    window_start_callback();
 
     frequency_count_configuration_t *config = malloc(sizeof(*config));
     config->pcnt_gpio = GPIO_SIGNAL_INPUT;
@@ -120,8 +121,11 @@ void app_main()
     config->rmt_clk_div = RMT_CLK_DIV;
     config->sampling_period_seconds = SAMPLE_PERIOD;
     config->sampling_window_seconds = WINDOW_DURATION;
-    config->window_start_callback = &window_start_callback;
-    config->frequency_update_callback = &frequency_callback;
+    config->window_start_callback = NULL;     // &window_start_callback;
+    config->frequency_update_callback = NULL; // &frequency_callback;
+
+    static TaskHandle_t task;
+    xTaskCreate(&frequency_count_task_function, "frequency_count_task", 4096, config, 5, &task);
 
     as3933_spi_init();
     as3933_reset();
@@ -132,34 +136,43 @@ void app_main()
     as3933_set_channel(1, true);
     as3933_set_channel(2, true);
     as3933_set_channel(3, true);
-    as3933_set_listening_mode(LM_STANDARD);
+    as3933_set_listening_mode(LM_SCANNING);
     as3933_set_patern_correlation(WK_FREQ_DET_ONLY);
-    //as3933_route_res_freq_on_dat(2, true);
-    //as3933_route_res_freq_on_dat(3, true);
-    static TaskHandle_t task;
-    xTaskCreate(&frequency_count_task_function, "frequency_count_task", 4096, config, 5, &task);
+    as3933_set_manchaster_decode(false);
+    as3933_set_patern_correlation(false);
+    as3933_set_freq_tolerance(TIGHT);
+
+    as3933_set_comparator_hysteresis(BOTH_EDGE_40MV);
+    as3933_set_gain_reduction(GAIN_REDUCTION_24DB);
+    as3933_set_antenna_damper(RESISTOR_27KOM);
+    as3933_enable_antenna_damper(true);
 
     as3933_set_capacity(1, 17);
-
-    //ESP_LOGD(TAG, "cal status %d", as3933_rc_osc_self_calibrate());
-
     as3933_set_capacity(2, 31);
     as3933_set_capacity(3, 31);
+    //ESP_LOGD(TAG, "cal status %d", as3933_rc_osc_self_calibrate());
 
     //as3933_route_clock_on_dat(true);
+    //as3933_route_res_freq_on_dat(1, true);
 
     while (1)
     {
         for (uint8_t i = 1; i < 4; i++)
         {
-            as3933_set_channel(i, true);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            ESP_LOGD(TAG, "Channel %d", i);
-            as3933_route_res_freq_on_dat(0, false);
-            as3933_route_res_freq_on_dat(i, true);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            xTaskNotify(task, 0, eNoAction);
-            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            //as3933_set_channel(i, true);
+            //vTaskDelay(1000 / portTICK_PERIOD_MS);
+            uint8_t c1 = as3933_get_rssi(1);
+            uint8_t c2 = as3933_get_rssi(2);
+            uint8_t c3 = as3933_get_rssi(3);
+            ESP_LOGD(TAG, "Channel 1 %d, Channel 2 %d, Channel 3 %d", c1, c2, c3);
+            as3933_reset_rssi();
+            as3933_clear_wake_up();
+            //ESP_LOGD(TAG, "Channel %d", i);
+            //as3933_route_res_freq_on_dat(0, false);
+            //as3933_route_res_freq_on_dat(1, true);
+            //vTaskDelay(100 / portTICK_PERIOD_MS);
+            //xTaskNotify(task, 0, eNoAction);
+            vTaskDelay(200 / portTICK_PERIOD_MS);
         }
     }
 

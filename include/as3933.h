@@ -79,6 +79,11 @@ bool as3933_get_rc_osc_calibrate_status();
 void as3933_agc(bool value);
 void as3933_set_min_preamble_length(fs_slc_t len);
 void as3933_set_listening_mode(listening_mode_t mode);
+void as3933_set_freq_tolerance(s_wu1_t value);
+void as3933_set_gain_reduction(gr_t value);
+void as3933_enable_antenna_damper(bool value);
+void as3933_set_antenna_damper(r_val_t value);
+void as3933_set_comparator_hysteresis(comp_hyst_t value);
 
 //commands
 void as3933_clear_wake_up();

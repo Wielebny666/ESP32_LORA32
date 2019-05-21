@@ -68,10 +68,17 @@ typedef union __attribute__((__packed__, aligned(1))) {
     uint8_t reg;
 } r1_t;
 
+typedef enum
+{
+    LOOSE,
+    NORMAL,
+    TIGHT
+} s_wu1_t;
+
 typedef union __attribute__((__packed__, aligned(1))) {
     struct __attribute__((__packed__, aligned(1)))
     {
-        uint8_t s_wu1 : 2;
+        s_wu1_t s_wu1 : 2;
         uint8_t display_clk : 2;
         uint8_t reserved : 1;
         uint8_t g_boost : 1;
@@ -92,6 +99,15 @@ typedef enum
     PREAMBLE_LEN_3_0MS,
     PREAMBLE_LEN_3_5MS
 } fs_slc_t;
+
+typedef enum
+{
+    BOTH_EDGE_40MV,
+    POSITIVE_EDGE_40MV,
+    BOTH_EDGE_20MV,
+    POSITIVE_EDGE_20MV
+} comp_hyst_t;
+
 typedef union __attribute__((__packed__, aligned(1))) {
     struct __attribute__((__packed__, aligned(1)))
     {
@@ -113,26 +129,30 @@ typedef union __attribute__((__packed__, aligned(1))) {
     uint8_t reg;
 } r3_t;
 
+typedef enum
+{
+    NO_GAIN = 0,
+    GAIN_REDUCTION_4DB = 0b00000101,
+    GAIN_REDUCTION_8DB = 0b00000111,
+    GAIN_REDUCTION_12DB = 0b00001001,
+    GAIN_REDUCTION_16DB = 0b00001011,
+    GAIN_REDUCTION_20DB = 0b00001101,
+    GAIN_REDUCTION_24DB = 0b00001111
+} gr_t;
+
+typedef enum
+{
+    RESISTOR_1KOM,
+    RESISTOR_3KOM,
+    RESISTOR_9KOM,
+    RESISTOR_27KOM
+} r_val_t;
+
 typedef union __attribute__((__packed__, aligned(1))) {
     struct __attribute__((__packed__, aligned(1)))
     {
-        enum
-        {
-            NO_GAIN = 0,
-            GAIN_REDUCTION_4DB = 0b00000101,
-            GAIN_REDUCTION_8DB = 0b00000111,
-            GAIN_REDUCTION_12DB = 0b00001001,
-            GAIN_REDUCTION_16DB = 0b00001011,
-            GAIN_REDUCTION_20DB = 0b00001101,
-            GAIN_REDUCTION_24DB = 0b00001111
-        } gr : 4;
-        enum
-        {
-            RESISTOR_1KOM,
-            RESISTOR_3KOM,
-            RESISTOR_9KOM,
-            RESISTOR_27KOM
-        } r_val : 2;
+        gr_t gr : 4;
+        r_val_t r_val : 2;
         uint8_t t_off : 2;
     };
     uint8_t reg;
