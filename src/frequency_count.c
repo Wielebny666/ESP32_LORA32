@@ -69,36 +69,17 @@ static uint32_t create_rmt_window(rmt_item32_t *items, double sampling_window_se
     uint32_t total_duration = (uint32_t)(sampling_window_seconds / rmt_period);
     ESP_LOGD(TAG, "total_duration %f seconds = %d * %g seconds", sampling_window_seconds, total_duration, rmt_period);
 
+    uint16_t *p_items = (uint16_t *)items;
     // max duration per item is 2^15-1 = 32767
     while (total_duration > 0)
     {
         uint32_t duration = total_duration > 32767 ? 32767 : total_duration;
-        items[num_items].level0 = 1;
-        items[num_items].duration0 = duration;
+        p_items[num_items] = (1 << 15) | duration;
         total_duration -= duration;
-        ESP_LOGD(TAG, "duration %d", duration);
-
-        if (total_duration > 0)
-        {
-            uint32_t duration = total_duration > 32767 ? 32767 : total_duration;
-            items[num_items].level1 = 1;
-            items[num_items].duration1 = duration;
-            total_duration -= duration;
-        }
-        else
-        {
-            items[num_items].level1 = 0;
-            items[num_items].duration1 = 0;
-        }
-        ESP_LOGD(TAG, "[%d].level0 %d", num_items, items[num_items].level0);
-        ESP_LOGD(TAG, "[%d].duration0 %d", num_items, items[num_items].duration0);
-        ESP_LOGD(TAG, "[%d].level1 %d", num_items, items[num_items].level1);
-        ESP_LOGD(TAG, "[%d].duration1 %d", num_items, items[num_items].duration1);
-
-        ++num_items;
+        num_items++;
     }
-    ESP_LOGD(TAG, "num_items %d", num_items);
-    return num_items;
+
+    return (num_items + 1) / 2;
 }
 
 static void init_pcnt(uint8_t pulse_gpio, uint8_t ctrl_gpio, pcnt_unit_t unit, pcnt_channel_t channel, uint16_t pcnt_filter_length)
@@ -134,12 +115,12 @@ void frequency_count_task_function(void *pvParameter)
     frequency_count_configuration_t configuration;
 
     assert(pvParameter);
-    ESP_LOGI(TAG, "Core ID %d", xPortGetCoreID());
+    ESP_LOGD(TAG, "Core ID %d", xPortGetCoreID());
 
     configuration = *(frequency_count_configuration_t *)pvParameter;
     frequency_count_configuration_t *task_inputs = &configuration;
 
-    ESP_LOGI(TAG, "pcnt_gpio %d, pcnt_unit %d, pcnt_channel %d, rmt_gpio %d, rmt_clk_div %d, sampling_period_seconds %f, sampling_window_seconds %f, pcnt_filter_length %d",
+    ESP_LOGD(TAG, "pcnt_gpio %d|pcnt_unit %d|pcnt_channel %d|rmt_gpio %d|rmt_clk_div %d|sampling_period_seconds %f|sampling_window_seconds %f|pcnt_filter_length %d",
              task_inputs->pcnt_gpio,
              task_inputs->pcnt_unit,
              task_inputs->pcnt_channel,
@@ -156,6 +137,7 @@ void frequency_count_task_function(void *pvParameter)
     const double rmt_period = (double)(task_inputs->rmt_clk_div) / 80000000.0;
 
     uint8_t req_blocks = (uint8_t)ceil((task_inputs->sampling_window_seconds / ((2.0 * 32767.0) / (80000000.0 / task_inputs->rmt_clk_div))) / RMT_MEM_ITEM_NUM);
+    ESP_LOGD(TAG, "Req blocks %d", req_blocks);
     assert(req_blocks < 8);
     const size_t items_size = RMT_MEM_BLOCK_BYTE_NUM * req_blocks;
     rmt_item32_t *rmt_items = malloc(items_size);
