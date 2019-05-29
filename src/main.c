@@ -24,6 +24,7 @@
 #include "radio.h"
 #include "as3933.h"
 #include "led.h"
+#include "rfid.h"
 
 #include "frequency_count.h"
 
@@ -93,7 +94,7 @@ static void config_led(void)
 static void begin_sampling()
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
-    gpio_matrix_in(GPIO_SIGNAL_INPUT, RMT_SIG_IN1_IDX, false);
+    gpio_matrix_in(GPIO_SIGNAL_INPUT, RMT_SIG_IN0_IDX, false);
     //gpio_matrix_in(GPIO_SIGNAL_INPUT, SIG_IN_FUNC224_IDX, false);
 }
 
@@ -101,11 +102,22 @@ static void finish_sampling(rmt_item32_t *items, size_t qty)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
     ESP_LOGI(TAG, "Items qty %d", qty);
-    gpio_matrix_in(GPIO_FUNC_IN_LOW, RMT_SIG_IN1_IDX, false);
+    gpio_matrix_in(GPIO_FUNC_IN_LOW, RMT_SIG_IN0_IDX, false);
     print_rx_data(items, qty);
 }
 
 void app_main()
+{
+    esp_log_level_set("as3933", ESP_LOG_NONE);
+    static TaskHandle_t rfid_task_handler;
+    xTaskCreate(rfid_task, "rfid_task", 1024 * 5, NULL, 20, &rfid_task_handler);
+    while (1)
+    {
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+}
+
+void app_main__()
 {
     esp_log_level_set("as3933", ESP_LOG_NONE);
 
@@ -114,9 +126,11 @@ void app_main()
     demodulator_configuration_t *demod_config = malloc(sizeof(*demod_config));
     demod_config->rmt_gpio = GPIO_SIGNAL_INPUT;
     demod_config->rmt_clk_div = 2;
-    demod_config->rmt_channel = RMT_CHANNEL_1;
-    demod_config->rx_buff_size = 8 * 64 * 10;
+    demod_config->rmt_channel = RMT_CHANNEL_0;
+    demod_config->rx_buff_size = 8 * 64 * 4;
     demod_config->budrate_filter = 120000;
+    demod_config->break_measure_time_us = 10;
+    demod_config->measure_idle_threshold_us = 80;
     demod_config->begin_measure_callback = &begin_sampling;
     demod_config->finish_measure_callback = &finish_sampling;
 
