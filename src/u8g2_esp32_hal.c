@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
+#include "driver/spi_master.h"
+#include "driver/i2c.h"
 
-// #include "sdkconfig.h"
 #include "esp_log.h"
 
 #include "u8g2_esp32_hal.h"

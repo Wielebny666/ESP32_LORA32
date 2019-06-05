@@ -39,31 +39,40 @@ void task_display(void *pvParameters)
         u8g2_esp32_gpio_and_delay_cb); // init u8g2 structure
     u8x8_SetI2CAddress(&u8g2.u8x8, 0x78);
 
-    u8g2_InitDisplay(&u8g2);     // send init sequence to the display, display is in sleep mode after this,
+    u8g2_InitDisplay(&u8g2); // send init sequence to the display, display is in sleep mode after this,
+    vTaskDelay(50 / portTICK_PERIOD_MS);
     u8g2_SetPowerSave(&u8g2, 0); // wake up display
+    vTaskDelay(50 / portTICK_PERIOD_MS);
     u8g2_ClearBuffer(&u8g2);
-
-    while (xQueueReceive(display_queue, &message, portMAX_DELAY) == pdTRUE)
+    u8g2_SetFont(&u8g2, u8g2_font_courR08_tr);
+    u8g2_DrawStr(&u8g2, 0, 8, "LCD init...");
+    u8g2_SendBuffer(&u8g2);
+    while (1)
     {
-        char rssi_string[12];
-        sprintf(rssi_string, "RSSI= %4d dB", message.rssi_value);
-        char snr_string[10];
-        sprintf(snr_string, "Snr= %4d", message.snr_value);
-        char status_string[10];
-        sprintf(status_string, "%s", message.status);
-        // char freq_string[10];
-        // sprintf(freq_string, "Freq= %.1f MHz", message.freq_value);
+        portBASE_TYPE ret = xQueueReceive(display_queue, &message, 500 / portTICK_PERIOD_MS);
+        if (ret == pdTRUE)
+        {
+            ESP_LOGD(TAG, "Tick");
+            char rssi_string[12];
+            sprintf(rssi_string, "RSSI= %4d dB", message.rssi_value);
+            char snr_string[10];
+            sprintf(snr_string, "Snr= %4d", message.snr_value);
+            char status_string[10];
+            sprintf(status_string, "%s", message.status);
+            // char freq_string[10];
+            // sprintf(freq_string, "Freq= %.1f MHz", message.freq_value);
 
-        u8g2_ClearBuffer(&u8g2);
+            u8g2_ClearBuffer(&u8g2);
 
-        u8g2_SetFont(&u8g2, u8g2_font_courR08_tr);
-        u8g2_DrawStr(&u8g2, 0, 8, rssi_string);
-        //u8g2_DrawStr(&u8g2, 0, 20, freq_string);
-        u8g2_DrawStr(&u8g2, 0, 16 + 1, snr_string);
-        u8g2_DrawStr(&u8g2, 0, 26, status_string);
-        u8g2_SendBuffer(&u8g2);
+            u8g2_SetFont(&u8g2, u8g2_font_courR08_tr);
+            u8g2_DrawStr(&u8g2, 0, 8, rssi_string);
+            //u8g2_DrawStr(&u8g2, 0, 20, freq_string);
+            u8g2_DrawStr(&u8g2, 0, 16 + 1, snr_string);
+            u8g2_DrawStr(&u8g2, 0, 26, status_string);
+            u8g2_SendBuffer(&u8g2);
+        }
     }
-    vTaskDelay(1 / portTICK_PERIOD_MS); //wait for 500 ms
+    vTaskDelay(10 / portTICK_PERIOD_MS); //wait for 500 ms
     ESP_LOGD(TAG, "All done!");
     vTaskDelete(NULL);
 }

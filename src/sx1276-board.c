@@ -26,9 +26,10 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 
-#include "hardware.h"
 #include "radio.h"
 #include "sx1276-board.h"
+
+#include "hardware.h"
 
 static const char *TAG = "sx1276-board";
 
@@ -94,10 +95,10 @@ void SX1276IoInit(void)
     sx1267_dio.intr_type = GPIO_PIN_INTR_DISABLE;
     ESP_ERROR_CHECK(gpio_config(&sx1267_dio));
 
-    SX1276.Reset = RADIO_RESET;
-    SX1276.DIO0 = RADIO_DIO_0;
-    SX1276.DIO1 = RADIO_DIO_1;
-    SX1276.DIO2 = RADIO_DIO_2;
+    sx1276.Reset = RADIO_RESET;
+    sx1276.DIO0 = RADIO_DIO_0;
+    sx1276.DIO1 = RADIO_DIO_1;
+    sx1276.DIO2 = RADIO_DIO_2;
 }
 
 void SX1276IoIrqInit(DioIrqHandler **irqHandlers)
@@ -174,16 +175,16 @@ void SX1276Reset(void)
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
     // Set RESET pin to 0
-    ESP_ERROR_CHECK(gpio_set_level(SX1276.Reset, 0));
+    ESP_ERROR_CHECK(gpio_set_level(sx1276.Reset, 0));
 
     // Wait 1 ms
-    vTaskDelay(1 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
 
     // Configure RESET as input
-    ESP_ERROR_CHECK(gpio_set_level(SX1276.Reset, 1));
+    ESP_ERROR_CHECK(gpio_set_level(sx1276.Reset, 1));
 
     // Wait 6 ms
-    vTaskDelay(6 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
 }
 
 void SX1276SetRfTxPower(int8_t power)

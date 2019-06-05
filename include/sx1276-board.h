@@ -117,6 +117,6 @@ void SX1276DbgPinRxWrite(uint8_t state);
 /*!
  * Radio hardware and global parameters
  */
-extern SX1276_t SX1276;
+extern SX1276_t sx1276;
 
 #endif // __SX1276_BOARD_H__

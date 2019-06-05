@@ -87,7 +87,7 @@ void task_led(void *pvParameter __attribute__((unused)))
         // ESP_LOGD(TAG, "Up");
         // vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
-    vTaskDelay(1 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
     ESP_LOGD(TAG, "All done!");
     vTaskDelete(NULL);
 }

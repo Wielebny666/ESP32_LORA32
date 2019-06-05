@@ -26,7 +26,7 @@ void SpiInit()
     //Initialize the SPI bus
     ESP_ERROR_CHECK(spi_bus_initialize(VSPI_HOST, &buscfg, 0));
     //Attach the Device to the SPI bus
-    ESP_ERROR_CHECK(spi_bus_add_device(VSPI_HOST, &devcfg, &SX1276.Spi));
+    ESP_ERROR_CHECK(spi_bus_add_device(VSPI_HOST, &devcfg, &sx1276.Spi));
 
     SX1276IoInit();
 }

@@ -4,7 +4,6 @@
 #include "esp_log.h"
 #include "esp_err.h"
 
-#include "driver/rmt.h"
 #include "modulator.h"
 
 static const char *RMT_TX = "RMT Tx";
@@ -64,7 +63,7 @@ void rmt_tx_task(void *pvParameter)
         ESP_LOGD(RMT_TX, "Transmission begin");
         ESP_ERROR_CHECK(rmt_write_sample(task_inputs->rmt_channel, sample, sizeof(sample) / sizeof(sample[0]), false));
         ESP_LOGD(RMT_TX, "Transmission complete");
-        vTaskDelay(1 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }

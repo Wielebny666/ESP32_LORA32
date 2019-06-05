@@ -148,12 +148,20 @@ typedef enum
     RESISTOR_27KOM
 } r_val_t;
 
+typedef enum
+{
+    OFF_1MS,
+    OFF_2MS,
+    OFF_4MS,
+    OFF_8MF
+} t_off_t;
+
 typedef union __attribute__((__packed__, aligned(1))) {
     struct __attribute__((__packed__, aligned(1)))
     {
         gr_t gr : 4;
         r_val_t r_val : 2;
-        uint8_t t_off : 2;
+        t_off_t t_off : 2;
     };
     uint8_t reg;
 } r4_t;
@@ -194,10 +202,10 @@ typedef union __attribute__((__packed__, aligned(1))) {
         uint8_t reserved : 2;
         enum
         {
-            RANGE_95_150KHZ,
-            RANGE_65_95KHZ,
-            RANGE_40_65KHZ,
-            RANGE_23_40KHZ,
+            RANGE_95_150KHZ = 0,
+            RANGE_65_95KHZ = 1,
+            RANGE_40_65KHZ = 2,
+            RANGE_23_40KHZ = 3,
             RANGE_15_23KHZ = 7
         } band_sel : 3;
     };

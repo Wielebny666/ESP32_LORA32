@@ -192,7 +192,7 @@ void task_radio(void *pvParameter)
                         {
                             Buffer[i] = i - 4;
                         }
-                        vTaskDelay(1 / portTICK_PERIOD_MS);
+                        vTaskDelay(10 / portTICK_PERIOD_MS);
                         Radio.Send(Buffer, BufferSize);
                     }
                     else // valid reception but not a PING as expected
@@ -208,7 +208,7 @@ void task_radio(void *pvParameter)
 #endif
             break;
         case TX:
-            vTaskDelay(1 / portTICK_PERIOD_MS);
+            vTaskDelay(10 / portTICK_PERIOD_MS);
             Radio.Rx(RX_TIMEOUT_VALUE);
             State = LOWPOWER;
 #ifdef DEBUG
@@ -232,7 +232,7 @@ void task_radio(void *pvParameter)
                 {
                     Buffer[i] = i - 4;
                 }
-                vTaskDelay(1 / portTICK_PERIOD_MS);
+                vTaskDelay(10 / portTICK_PERIOD_MS);
                 Radio.Send(Buffer, BufferSize);
             }
             else

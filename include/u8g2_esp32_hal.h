@@ -11,8 +11,6 @@
 #include "u8g2.h"
 
 #include "driver/gpio.h"
-#include "driver/spi_master.h"
-#include "driver/i2c.h"
 
 #define U8G2_ESP32_HAL_UNDEFINED (-1)
 

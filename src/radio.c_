@@ -53,7 +53,7 @@ void task_radio(void *pvParameters)
         default:
             break;
         }
-        //vTaskDelay(1 / portTICK_PERIOD_MS); //wait for 500 ms
+        //vTaskDelay(10 / portTICK_PERIOD_MS); //wait for 500 ms
     }
     vTaskDelete(NULL);
 }

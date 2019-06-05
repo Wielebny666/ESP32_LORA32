@@ -52,9 +52,13 @@ void as3933_spi_init()
         .command_bits = 8};
 
     //Initialize the SPI bus
-    ESP_ERROR_CHECK(spi_bus_initialize(HSPI_HOST, &buscfg, 0));
+    ESP_ERROR_CHECK(spi_bus_initialize(RFID_SPI, &buscfg, 0));
     //Attach the Device to the SPI bus
-    ESP_ERROR_CHECK(spi_bus_add_device(HSPI_HOST, &devcfg, &as3933));
+    ESP_ERROR_CHECK(spi_bus_add_device(RFID_SPI, &devcfg, &as3933));
+}
+
+void as3933_w_up_irq_init(){
+
 }
 
 void as3933_cmd(cmd_t cmd)
@@ -149,6 +153,30 @@ void as3933_set_channel(uint8_t channel, bool value)
         break;
     }
     as3933_write(R0, r0.reg);
+}
+
+bool as3933_get_channel(uint8_t channel)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r0_t r0 = {
+        .reg = as3933_read(R0)};
+
+    switch (channel)
+    {
+    case 1:
+        return r0.en_a1;
+        break;
+    case 2:
+        return r0.en_a2;
+        break;
+    case 3:
+        return r0.en_a3;
+        break;
+    default:
+        return NULL;
+        break;
+    }
 }
 
 void as3933_set_manchaster_decode(bool select)
@@ -356,22 +384,22 @@ uint8_t as3933_get_rssi(uint8_t channel)
         r10_t r10 = {
             .reg = as3933_read(R10)};
         resp = r10.rssi1;
-        break;
     }
+    break;
     case 2:
     {
         r11_t r11 = {
             .reg = as3933_read(R11)};
         resp = r11.rssi2;
-        break;
     }
+    break;
     case 3:
     {
         r12_t r12 = {
             .reg = as3933_read(R12)};
         resp = r12.rssi3;
-        break;
     }
+    break;
     default:
         resp = 0;
         break;
@@ -388,7 +416,29 @@ bool as3933_get_rc_osc_calibrate_status()
     return r14.rc_cal_ok;
 }
 
-void as3933_agc(bool value)
+//Enable Data slicer absolute reference
+void as3933_set_data_slicer(bool value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r1_t r1 = {
+        .reg = as3933_read(R1)};
+    r1.abs_hy = value;
+    as3933_write(R1, r1.reg);
+}
+
+//Data slicer absolute threshold reduction
+void as3933_set_data_slicer_threshold_reduction(bool value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r2_t r2 = {
+        .reg = as3933_read(R2)};
+    r2.s_abs = value;
+    as3933_write(R2, r2.reg);
+}
+
+void as3933_set_block_agc(bool value)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
@@ -396,6 +446,15 @@ void as3933_agc(bool value)
         .reg = as3933_read(R9)};
     r9.block_agc = value;
     as3933_write(R9, r9.reg);
+}
+
+bool as3933_get_block_agc(void)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r9_t r9 = {
+        .reg = as3933_read(R9)};
+    return r9.block_agc;
 }
 
 void as3933_set_min_preamble_length(fs_slc_t len)
@@ -477,6 +536,19 @@ void as3933_set_antenna_damper(r_val_t value)
     as3933_write(R4, r4.reg);
 }
 
+//OFF time in ON/OFF operation mode
+void as3933_set_off_timer(t_off_t value)
+{
+    ESP_LOGD(TAG, "%s", __FUNCTION__);
+
+    r4_t r4 = {
+        .reg = as3933_read(R4)};
+
+    r4.t_off = value;
+
+    as3933_write(R4, r4.reg);
+}
+
 void as3933_set_comparator_hysteresis(comp_hyst_t value)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
@@ -535,8 +607,4 @@ bool as3933_rc_osc_self_calibrate()
     as3933_calibrate_rco_lc();
     vTaskDelay(5000 / portTICK_PERIOD_MS);
     return as3933_get_rc_osc_calibrate_status();
-}
-
-static void IRAM_ATTR as3933_on_wake_up_irq(void *context)
-{
 }
