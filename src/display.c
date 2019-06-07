@@ -52,13 +52,14 @@ void task_display(void *pvParameters)
         portBASE_TYPE ret = xQueueReceive(display_queue, &message, 500 / portTICK_PERIOD_MS);
         if (ret == pdTRUE)
         {
-            ESP_LOGD(TAG, "Tick");
             char rssi_string[12];
             sprintf(rssi_string, "RSSI= %4d dB", message.rssi_value);
             char snr_string[10];
             sprintf(snr_string, "Snr= %4d", message.snr_value);
             char status_string[10];
             sprintf(status_string, "%s", message.status);
+            char rfid_string[20];
+            sprintf(rfid_string, "R1= %2d R2= %2d R3= %2d", message.rfid.rfid_rssi_1, message.rfid.rfid_rssi_2, message.rfid.rfid_rssi_3);
             // char freq_string[10];
             // sprintf(freq_string, "Freq= %.1f MHz", message.freq_value);
 
@@ -68,11 +69,12 @@ void task_display(void *pvParameters)
             u8g2_DrawStr(&u8g2, 0, 8, rssi_string);
             //u8g2_DrawStr(&u8g2, 0, 20, freq_string);
             u8g2_DrawStr(&u8g2, 0, 16 + 1, snr_string);
-            u8g2_DrawStr(&u8g2, 0, 26, status_string);
+            //u8g2_DrawStr(&u8g2, 0, 26, status_string);
+            u8g2_DrawStr(&u8g2, 0, 26, rfid_string);
             u8g2_SendBuffer(&u8g2);
         }
     }
-    vTaskDelay(10 / portTICK_PERIOD_MS); //wait for 500 ms
+    vTaskDelay(500 / portTICK_PERIOD_MS); //wait for 500 ms
     ESP_LOGD(TAG, "All done!");
     vTaskDelete(NULL);
 }

@@ -113,26 +113,45 @@ static void finish_sampling(rmt_item32_t *items, size_t qty)
     print_rx_data(items, qty);
 }
 
+QueueHandle_t display_queue;
+static display_t send_message = {
+    0, 0, 0, {0, 0, 0}, ""};
+
+static void display_rfid_signal(uint8_t r1, uint8_t r2, uint8_t r3)
+{
+    if (display_queue == NULL)
+    {
+        ESP_LOGI(TAG, "Display queue not exist!");
+        return;
+    }
+    send_message.rfid.rfid_rssi_1 = r1;
+    send_message.rfid.rfid_rssi_2 = r2;
+    send_message.rfid.rfid_rssi_3 = r3;
+    xQueueSend(display_queue, &send_message, (TickType_t)0);
+}
+
 void app_main()
 {
-#ifdef AS3933
-    esp_log_level_set("as3933", ESP_LOG_NONE);
-
-    rfid_configuration_t *rfid_config = malloc(sizeof(*rfid_config));
-    rfid_config->frequency = 125000;
-    rfid_config->manchester = false;
-    rfid_config->wake_up_callback = NULL;
-    
-    static TaskHandle_t rfid_task_handler;
-    xTaskCreate(rfid_task, "rfid_task", 1024 * 5, rfid_config, 20, &rfid_task_handler);
-#endif
 #ifdef TTGO
-    QueueHandle_t display_queue = xQueueCreate(10, sizeof(display_t));
-    xTaskCreatePinnedToCore(task_display, "SSD1306", 2048, (void *)display_queue, 5, NULL, 1);
-    //xTaskCreate(task_display, "SSD1306", (2048), (void *)display_queue, 5, NULL);
+    display_queue = xQueueCreate(5, sizeof(display_t));
+    xTaskCreatePinnedToCore(task_display, "SSD1306", 1024 * 4, (void *)display_queue, 5, NULL, 1);
 #else
     static TaskHandle_t rf_raw_tx_task_handler;
     xTaskCreate(rf_raw_tx_task, "rf_raw_tx_task", 1024 * 5, NULL, 20, &rf_raw_tx_task_handler);
+#endif
+
+#ifdef AS3933
+    esp_log_level_set("as3933", ESP_LOG_NONE);
+    esp_log_level_set("rmt_rx", ESP_LOG_NONE);
+    //esp_log_level_set("app_main", ESP_LOG_NONE);
+
+    rfid_configuration_t *rfid_config = malloc(sizeof(*rfid_config));
+    rfid_config->frequency = 125000;
+    rfid_config->manchester = true;
+    rfid_config->wake_up_callback = &display_rfid_signal;
+
+    static TaskHandle_t rfid_task_handler;
+    xTaskCreate(rfid_task, "rfid_task", 1024 * 5, rfid_config, 20, &rfid_task_handler);
 #endif
 
     while (1)
