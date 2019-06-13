@@ -41,12 +41,12 @@ static void IRAM_ATTR wake_up_isr_handler(void *arg);
 void rfid_init(uint8_t freq, uint8_t bitrate, bool manchaster)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
-    as3933_spi_init();
+    //as3933_spi_init();
     as3933_reset();
     as3933_clear_wake_up();
-    uint8_t test5 = as3933_read(5);
-    uint8_t test6 = as3933_read(6);
-    ESP_LOGD(TAG, "%x %x", test5, test6);
+    // uint8_t test5 = as3933_read(5);
+    // uint8_t test6 = as3933_read(6);
+    //ESP_LOGD(TAG, "%x %x", test5, test6);
 
     as3933_set_listening_mode(LM_STANDARD);
     as3933_band_select(freq);

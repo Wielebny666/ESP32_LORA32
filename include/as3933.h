@@ -25,13 +25,13 @@ typedef void(DioIrqHandler)(void *context);
 
 #define XTAL_FREQ 32000
 
-void as3933_spi_init();
-void as3933_w_up_irq_init();
-void as3933_cmd(cmd_t cmd);
-void as3933_write(uint8_t addr, uint8_t data);
-uint8_t as3933_read(uint8_t addr);
-void as3933_write_buffer(uint16_t addr, uint8_t *buffer, uint8_t size);
-void as3933_read_buffer(uint16_t addr, uint8_t *buffer, uint8_t size);
+// void as3933_spi_init();
+// void as3933_w_up_irq_init();
+// void as3933_cmd(cmd_t cmd);
+// void as3933_write(uint8_t addr, uint8_t data);
+// uint8_t as3933_read(uint8_t addr);
+// void as3933_write_buffer(uint16_t addr, uint8_t *buffer, uint8_t size);
+// void as3933_read_buffer(uint16_t addr, uint8_t *buffer, uint8_t size);
 
 void as3933_reset();
 void as3933_band_select(uint32_t freq);
