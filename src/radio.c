@@ -82,13 +82,14 @@ void OnTxTimeout(void);
 void OnRxTimeout(void);
 void OnRxError(void);
 
-static TaskHandle_t task;
+static TaskHandle_t task_led_handler;
+static BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 void task_radio(void *pvParameter)
 {
     ESP_LOGD(TAG, "%s", __FUNCTION__);
 
-    xTaskCreatePinnedToCore(task_led, "blink_task", 3072, xTaskGetCurrentTaskHandle(), 5, &task, 1);
+	xTaskCreatePinnedToCore(task_led, "blink_task", 3072, xTaskGetCurrentTaskHandle(), 5, &task_led_handler, 1);
 
     assert(pvParameter);
     display_queue = (QueueHandle_t *)pvParameter;
@@ -268,13 +269,13 @@ void OnTxDone(void)
     Radio.Sleep();
     State = TX;
     send_message.status = "TxDone";
-    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	xQueueSendFromISR(display_queue, &send_message, &xHigherPriorityTaskWoken);
 }
 
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xTaskNotifyFromISR(task, 0, eNoAction, &xHigherPriorityTaskWoken);
+	xTaskNotifyFromISR(task_led_handler, 0, eNoAction, &xHigherPriorityTaskWoken);
 
 #ifdef DEBUG
     ets_printf("D (%d) %s: %s\n", esp_log_timestamp(), TAG, __FUNCTION__);
@@ -293,7 +294,7 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
     send_message.rssi_value = rssi;
     send_message.snr_value = snr;
     send_message.status = "RxDone";
-    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
+	xQueueSendFromISR(display_queue, &send_message, &xHigherPriorityTaskWoken);
 }
 
 void OnTxTimeout(void)
@@ -305,7 +306,7 @@ void OnTxTimeout(void)
     State = TX_TIMEOUT;
 
     send_message.status = "TxTimeout";
-    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
+	xQueueSendFromISR(display_queue, &send_message, &xHigherPriorityTaskWoken);
 }
 
 void OnRxTimeout(void)
@@ -317,7 +318,7 @@ void OnRxTimeout(void)
     State = RX_TIMEOUT;
 
     send_message.status = "RxTimeout";
-    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
+	xQueueSendFromISR(display_queue, &send_message, &xHigherPriorityTaskWoken);
 }
 
 void OnRxError(void)
@@ -331,5 +332,5 @@ void OnRxError(void)
     send_message.status = "RxError";
     send_message.rssi_value = 0;
     send_message.snr_value = 0;
-    xQueueSendFromISR(display_queue, &send_message, (TickType_t)0);
+	xQueueSendFromISR(display_queue, &send_message, &xHigherPriorityTaskWoken);
 }
