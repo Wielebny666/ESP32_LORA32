@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "as3933_regs.h"
-#include "as3933_hal.h"
 
 typedef enum
 {

@@ -122,10 +122,10 @@ void rfid_task(void *pvParameter)
 	demod_config->timeout_measure_callback = &on_timeout;
 	demod_config->error_measure_callback = &on_error;
 
-	//xTaskCreate(rmt_rx_task, "rmt_rx_task", 1024 * 5, demod_config, 40, &rmt_rx_task_handler);
-	//vTaskDelay(100 / portTICK_PERIOD_MS);
+	xTaskCreate(rmt_rx_task, "rmt_rx_task", 1024 * 5, demod_config, 40, &rmt_rx_task_handler);
+	vTaskDelay(100 / portTICK_PERIOD_MS);
 	rfid_init(rfid_task_param->frequency, rfid_task_param->bitrate, rfid_task_param->manchester);
-	//rfid_io_init(RFID_WAKE_UP);
+	rfid_io_init(RFID_WAKE_UP);
 	as3933_reset();
 	as3933_clear_wake_up();
 	uint16_t wu_patt = as3933_get_wakeup_pattern_16bit();

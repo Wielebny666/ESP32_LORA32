@@ -138,11 +138,10 @@ esp_err_t as3933_read(uint8_t addr, uint8_t *byte)
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
     t.length = 8;
-    t.cmd = addr | 0x30;
-    t.flags = SPI_TRANS_USE_RXDATA;
+    t.cmd = addr | 0x40;
+    t.rx_buffer = byte;
 
     error = spi_device_polling_transmit(as3933, &t);
-    *byte = t.rx_data[0];
     return error;
 }
 

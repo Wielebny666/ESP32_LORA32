@@ -8,51 +8,49 @@
 
 #include "hardware.h"
 
+static const char *TAG = "rfid_radio_control";
 
-static const char* TAG = "rfid_radio_control";
-
-#define RR_CONTROL_CHECK(a, ret_val, str, ...) \
-    if (!(a)) { \
-        ESP_LOGE(TAG, "%s(%u): " str, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
-        return (ret_val); \
-    }
-
+#define RR_CONTROL_CHECK(a, ret_val, str, ...)                                \
+	if (!(a))                                                                 \
+	{                                                                         \
+		ESP_LOGE(TAG, "%s(%u): " str, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+		return (ret_val);                                                     \
+	}
 
 esp_err_t radio_init()
 {
-	spi_communication_info_t comm = { 
+	spi_communication_info_t comm = {
 		.port = RFID_SPI,
 		.miso = RFID_MISO,
 		.mosi = RFID_MOSI,
 		.sclk = RFID_SCLK,
 		.cs = RFID_CS,
-		.spi_clock_speed_hz = RFID_CLK_SPEED
-	};
-	
+		.spi_clock_speed_hz = RFID_CLK_SPEED};
+
 	void *radio_handler = NULL;
 	esp_err_t error = spi_init(RFID1, &radio_handler);
 	RR_CONTROL_CHECK((radio_handler != NULL),
-		ESP_ERR_INVALID_STATE,
-		"rfid controller initialization fail.");
+					 ESP_ERR_INVALID_STATE,
+					 "rfid controller initialization fail.");
 	RR_CONTROL_CHECK((error == ESP_OK),
-		ESP_ERR_INVALID_STATE,
-		"rfid controller initialization fail, returns(0x%x).",
-		(uint32_t)error);
+					 ESP_ERR_INVALID_STATE,
+					 "rfid controller initialization fail, returns(0x%x).",
+					 (uint32_t)error);
 	error = spi_setup(RFID1, (void *)&comm);
 	RR_CONTROL_CHECK((error == ESP_OK),
-		ESP_ERR_INVALID_STATE,
-		"rfid controller setup fail, returns(0x%x).",
-		(uint32_t)error);
+					 ESP_ERR_INVALID_STATE,
+					 "rfid controller setup fail, returns(0x%x).",
+					 (uint32_t)error);
 	return error;
 }
 
 void radio_setup()
 {
 	//	as3933_reset();
-//	as3933_clear_wake_up();
-//	uint8_t test5 = as3933_read(5);
-//	uint8_t test6 = as3933_read(6);
-//	ESP_LOGD(TAG, "%x %x", test5, test6);
+	//	as3933_clear_wake_up();
+	//	uint8_t test5 = as3933_read(5);
+	//	uint8_t test6 = as3933_read(6);
+	//	ESP_LOGD(TAG, "%x %x", test5, test6);
 
 	as3933_set_listening_mode(LM_STANDARD);
 	as3933_band_select(125000);

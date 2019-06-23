@@ -136,6 +136,11 @@ static void display_rfid_signal(uint8_t r1, uint8_t r2, uint8_t r3)
 }
 #endif
 
+static void print_rfid_signal(uint8_t r1, uint8_t r2, uint8_t r3)
+{
+    ESP_LOGI(TAG, "RSSI L1 %d, L2 %d, L3 %d", r1, r2, r3);
+}
+
 void app_main()
 {
 #ifdef TTGO
@@ -147,8 +152,8 @@ void app_main()
 #endif
 
 #ifdef AS3933
-    esp_log_level_set("as3933", ESP_LOG_NONE);
-    esp_log_level_set("rmt_rx", ESP_LOG_NONE);
+    //esp_log_level_set("as3933", ESP_LOG_NONE);
+    //esp_log_level_set("rmt_rx", ESP_LOG_NONE);
     //esp_log_level_set("app_main", ESP_LOG_NONE);
 
     rfid_configuration_t *rfid_config = malloc(sizeof(*rfid_config));
@@ -157,7 +162,7 @@ void app_main()
 #ifdef SSD1306
     rfid_config->wake_up_callback = &display_rfid_signal;
 #else
-    rfid_config->wake_up_callback = NULL;
+    rfid_config->wake_up_callback = &print_rfid_signal;
 #endif
     static TaskHandle_t rfid_task_handler;
     xTaskCreate(rfid_task, "rfid_task", 1024 * 5, rfid_config, 20, &rfid_task_handler);
