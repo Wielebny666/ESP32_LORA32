@@ -26,7 +26,7 @@ void led_init()
         .timer_num = LEDC_TIMER_0,          // timer index
         .freq_hz = 10                       // frequency of PWM signal
     };
-    // Set configuration of timer0 for lo speed channels
+    // Set configuration of timer0
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
 
     ledc_channel_config_t ledc_channel = {

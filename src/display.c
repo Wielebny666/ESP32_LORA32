@@ -15,16 +15,23 @@
 #include "hardware.h"
 
 static const char *TAG = "display";
+static char freq_string[14];
 
 void task_display(void *pvParameters)
 {
-    ESP_LOGD(TAG, "%s", __FUNCTION__);
+    ESP_LOGI(TAG, "%s", __FUNCTION__);
     esp_log_level_set("u8g2_hal", ESP_LOG_NONE);
 
     assert(pvParameters);
     QueueHandle_t display_queue = (QueueHandle_t *)pvParameters;
 
-    display_t message;
+    DisplayStatus message = malloc(sizeof(struct DisplayStatus));
+    if (message == NULL)
+    {
+        ESP_LOGI(TAG, "[message] pointer not initialize");
+        vTaskDelete(NULL);
+        return;
+    }
 
     u8g2_esp32_hal_t u8g2_esp32_hal = U8G2_ESP32_HAL_DEFAULT;
     u8g2_esp32_hal.sda = PIN_I2C_SDA;
@@ -47,34 +54,61 @@ void task_display(void *pvParameters)
     u8g2_SetFont(&u8g2, u8g2_font_courR08_tr);
     u8g2_DrawStr(&u8g2, 0, 8, "LCD init...");
     u8g2_SendBuffer(&u8g2);
+
     while (1)
     {
-        portBASE_TYPE ret = xQueueReceive(display_queue, &message, 500 / portTICK_PERIOD_MS);
+        portBASE_TYPE ret = xQueueReceive(display_queue, message, 1000 / portTICK_PERIOD_MS);
         if (ret == pdTRUE)
         {
-            char rssi_string[12];
-            sprintf(rssi_string, "RSSI= %4d dB", message.rssi_value);
-            char snr_string[10];
-            sprintf(snr_string, "Snr= %4d", message.snr_value);
-            char status_string[10];
-            sprintf(status_string, "%s", message.status);
-            char rfid_string[20];
-            sprintf(rfid_string, "R1= %2d R2= %2d R3= %2d", message.rfid.rfid_rssi_1, message.rfid.rfid_rssi_2, message.rfid.rfid_rssi_3);
-            // char freq_string[10];
-            // sprintf(freq_string, "Freq= %.1f MHz", message.freq_value);
+            ESP_LOGI(TAG, "xQueueReceive f= %.1f MHz", message->freq_value);
+            //char rssi_string[12];
+            // sprintf(rssi_string, "RSSI= %4d dB", message->rssi_value);
+            // char snr_string[10];
+            // sprintf(snr_string, "Snr= %4d", message->snr_value);
+            // char status_string[10];
+            // sprintf(status_string, "%s", message->status);
+            // char rfid_string[20];
+            // sprintf(rfid_string, "R1= %2d R2= %2d R3= %2d", message->rfid.rssi_1, message->rfid.rssi_2, message->rfid.rssi_3);
+
+            sprintf(freq_string, "f= %.1f MHz", message->freq_value);
 
             u8g2_ClearBuffer(&u8g2);
 
             u8g2_SetFont(&u8g2, u8g2_font_courR08_tr);
-            u8g2_DrawStr(&u8g2, 0, 8, rssi_string);
-            //u8g2_DrawStr(&u8g2, 0, 20, freq_string);
-            u8g2_DrawStr(&u8g2, 0, 16 + 1, snr_string);
-            //u8g2_DrawStr(&u8g2, 0, 26, status_string);
-            u8g2_DrawStr(&u8g2, 0, 26, rfid_string);
+            // u8g2_DrawStr(&u8g2, 0, 8, rssi_string);
+            u8g2_DrawStr(&u8g2, 0, 20, freq_string);
+            // u8g2_DrawStr(&u8g2, 0, 16 + 1, snr_string);
+            // //u8g2_DrawStr(&u8g2, 0, 26, status_string);
+            // u8g2_DrawStr(&u8g2, 0, 26, rfid_string);
             u8g2_SendBuffer(&u8g2);
         }
+        else
+        {
+            ESP_LOGI(TAG, "xQueueReceive Timeout");
+        }
     }
-    vTaskDelay(500 / portTICK_PERIOD_MS); //wait for 500 ms
     ESP_LOGD(TAG, "All done!");
+    vTaskDelay(5000 / portTICK_PERIOD_MS); //wait for 500 ms
     vTaskDelete(NULL);
+}
+
+DisplayStatus DisplayStatus_Create(void)
+{
+    DisplayStatus me = malloc(sizeof(struct DisplayStatus));
+    if (me == NULL)
+    {
+        ESP_LOGI(TAG, "Pointer not initialize");
+        abort();
+        return NULL;
+    }
+    return me;
+}
+
+void DisplayStatus_Destroy(DisplayStatus const me)
+{
+    if (me == NULL)
+    {
+        ESP_LOGI(TAG, "Pointer not initialize");
+    }
+    free(me);
 }

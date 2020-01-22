@@ -76,29 +76,28 @@
     #endif
 
 #ifdef SX1276
-//SX1276 SPI & IO
-#define RADIO_SPI HSPI_HOST
+    //SX1276 SPI & IO
+    #define RADIO_SPI HSPI_HOST
+    #define RADIO_RESET GPIO_NUM_23
+    #define RADIO_MOSI GPIO_NUM_27
+    #define RADIO_MISO GPIO_NUM_19
+    #define RADIO_SCLK GPIO_NUM_5
+    #define RADIO_NSS GPIO_NUM_18
 
-#define RADIO_RESET GPIO_NUM_23
-#define RADIO_MOSI GPIO_NUM_27
-#define RADIO_MISO GPIO_NUM_19
-#define RADIO_SCLK GPIO_NUM_5
-#define RADIO_NSS GPIO_NUM_18
+    #define RADIO_DIO_0 GPIO_NUM_26
+    //outside
+    #define RADIO_DIO_1 GPIO_NUM_34
+    #define RADIO_DIO_2 GPIO_NUM_35
 
-#define RADIO_DIO_0 GPIO_NUM_26
-//outside
-#define RADIO_DIO_1 GPIO_NUM_34
-#define RADIO_DIO_2 GPIO_NUM_35
+    #define GPIO_INPUT_PIN_SEL (1ULL << RADIO_DIO_0) | (1ULL << RADIO_DIO_1) | (1ULL << RADIO_DIO_2)
 
-#define GPIO_INPUT_PIN_SEL (1ULL << RADIO_DIO_0) | (1ULL << RADIO_DIO_1) | (1ULL << RADIO_DIO_2)
-
-#define RADIO_WAKEUP_LEVEL_DEFAULT 0
+    #define RADIO_WAKEUP_LEVEL_DEFAULT 0
 #endif
 
 //RMT TX & RX
 #ifdef SX1276_ASYNC
-#define RMT_TX_GPIO_NUM GPIO_NUM_25 //sx1276 Rx
-#define RMT_RX_GPIO_NUM GPIO_NUM_15 //sx1276 Tx
+    #define RMT_TX_GPIO_NUM GPIO_NUM_25 //sx1276 Rx
+    #define RMT_RX_GPIO_NUM GPIO_NUM_15 //sx1276 Tx
 #endif
 
 //GREEN LED
