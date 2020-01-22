@@ -17,7 +17,7 @@ esp_err_t spi_init(spi_device_t device, void **handler)
         error = as3933_interface_create(device, &port_handler);
         break;
     default:
-        return ESP_ERR_NOT_SUPPORTED;
+        return error;
     }
     SPI_CHECK((port_handler != NULL),
                     ESP_ERR_INVALID_STATE,
