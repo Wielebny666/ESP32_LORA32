@@ -16,12 +16,12 @@ static const char* TAG = "rfid_controller";
         return (ret_val); \
     }
 
-#define R_CONTROLLER_ASSERT(con)                                                                     \
+#define R_CONTROLLER_ASSERT(con)                                                            \
     do                                                                                      \
     {                                                                                       \
         if (!(con))                                                                         \
         {                                                                                   \
-            ESP_LOGE(TAG, "assert errno:%d, errno_str: !(%s)", errno, strerror(errno)); \
+            ESP_LOGE(TAG, "assert errno:%d, errno_str: !(%s)", errno, strerror(errno));     \
             assert(0 && #con);                                                              \
         }                                                                                   \
     } while (0)

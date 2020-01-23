@@ -10,6 +10,7 @@ esp_err_t spi_init(spi_device_t device, void **handler)
 {
     void *port_handler = NULL;
     esp_err_t error = ESP_ERR_NOT_SUPPORTED;
+
     switch (device)
     {
     case RFID1:
@@ -19,6 +20,7 @@ esp_err_t spi_init(spi_device_t device, void **handler)
     default:
         return error;
     }
+    
     SPI_CHECK((port_handler != NULL),
                     ESP_ERR_INVALID_STATE,
                     "SPI interface initialization failure, error=(0x%x), device type=(0x%x).",

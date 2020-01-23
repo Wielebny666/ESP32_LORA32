@@ -7,6 +7,8 @@
 #include "as3933.h"
 #include "as3933_hal.h"
 
+static const char *TAG = "as3933";
+
 //const static as3933_hal_t *as3933;
 
 as3933_init_cmd_t as3933_config_register[] = {
@@ -27,8 +29,6 @@ as3933_init_cmd_t as3933_config_register[] = {
 	{R17, 0x00},
 	{R18, 0x00},
 	{R19, 0x00}};
-
-static const char *TAG = "as3933";
 
 //static spi_device_handle_t as3933;
 
