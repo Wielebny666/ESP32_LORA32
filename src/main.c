@@ -13,6 +13,7 @@
 #endif
 
 #include "led.h"
+#include "frequency_count.h"
 
 static const char *TAG = "app_main";
 QueueHandle_t displayQueue;
@@ -20,9 +21,12 @@ QueueHandle_t displayQueue;
 void app_main()
 {
     DisplayStatus messageStatus;
+    FrequencyCountConfig frequencyCountConfig;
     ESP_LOGI(TAG, "DisplayStatus %d", sizeof(struct DisplayStatus));
+    ESP_LOGI(TAG, "FrequencyCountConfig %d", sizeof(struct FrequencyCountConfig));
 
     messageStatus = DisplayStatus_Create();
+    frequencyCountConfig = FrequencyCountConfig_Create();
 
 #ifdef TTGO
     if ((displayQueue = xQueueCreate(5, sizeof(struct DisplayStatus))) == NULL)

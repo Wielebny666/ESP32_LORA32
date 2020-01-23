@@ -49,32 +49,36 @@
 #define FREQUENCY_COUNT_H
 
 #include <stdint.h>
-#include "driver/pcnt.h"
-#include "driver/rmt.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-typedef struct
-{
-    gpio_num_t pcnt_gpio;                   ///< count events on this GPIO
-    pcnt_unit_t pcnt_unit;                  ///< PCNT unit to use for counting
-    pcnt_channel_t pcnt_channel;            ///< PCNT channel to use for counting
-    uint16_t pcnt_filter_length;            ///< counter filter length in APB cycles
-    gpio_num_t rmt_gpio;                    ///< used by RMT to define a sampling window
-    rmt_channel_t rmt_channel;              ///< The RMT channel to use
-    uint8_t rmt_clk_div;                    ///< RMT pulse length, as a divider of the APB clock
-    float sampling_period_seconds;          ///< time (in seconds) between start of adjacent samples
-    float sampling_window_seconds;          ///< sample window length (in seconds)
-    void (*window_start_callback)(void);    ///< called just prior to starting a sampling window
-    void (*frequency_update_callback)(double hz);  ///< called each time a frequency is determined
-} frequency_count_configuration_t;
+    typedef struct FrequencyCountConfig *FrequencyCountConfig;
 
-/**
- * @brief Task function - pass this to xTaskCreate with a pointer to an instance of frequency_count_configuration_t as the parameter.
- */
-void frequency_count_task_function(void * pvParameter);
+    struct __attribute__((__packed__, aligned(1))) FrequencyCountConfig
+    {
+        gpio_num_t pcnt_gpio;                         ///< count events on this GPIO
+        pcnt_unit_t pcnt_unit;                        ///< PCNT unit to use for counting
+        pcnt_channel_t pcnt_channel;                  ///< PCNT channel to use for counting
+        uint16_t pcnt_filter_length;                  ///< counter filter length in APB cycles
+        gpio_num_t rmt_gpio;                          ///< used by RMT to define a sampling window
+        rmt_channel_t rmt_channel;                    ///< The RMT channel to use
+        uint8_t rmt_clk_div;                          ///< RMT pulse length, as a divider of the APB clock
+        float sampling_period_seconds;                ///< time (in seconds) between start of adjacent samples
+        float sampling_window_seconds;                ///< sample window length (in seconds)
+        void (*window_start_callback)(void);          ///< called just prior to starting a sampling window
+        void (*frequency_update_callback)(double hz); ///< called each time a frequency is determined
+    };
+
+    FrequencyCountConfig FrequencyCountConfig_Create(void);
+    void FrequencyCountConfig_Destroy(FrequencyCountConfig const me);
+
+    /**
+     * @brief Task function - pass this to xTaskCreate with a pointer to an instance of frequency_count_configuration_t as the parameter.
+     */
+    void frequency_count_task_function(void *pvParameter);
 
 #ifdef __cplusplus
 }
